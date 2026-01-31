@@ -2998,11 +2998,18 @@ export function SettingsView({
                       <div className="settings-field-label">Agent Skills</div>
                       <div className="settings-help">
                         Agent Skills provide dynamic capabilities the agent uses when relevant.
-                        Skills are located in <code>.cursor/skills/</code> (project) or <code>~/.cursor/skills/</code> (global).
+                        Create a <code>SKILL.md</code> file with YAML frontmatter to define skills.
                       </div>
-                      <div className="settings-help" style={{ marginTop: "8px", color: "var(--color-warning)" }}>
-                        <strong>Note:</strong> Agent Skills require the <strong>Nightly</strong> update channel.
-                        Enable in Cursor Settings → Beta → Update Channel → Nightly.
+                      <div className="settings-help" style={{ marginTop: "8px" }}>
+                        <strong>Locations:</strong>
+                        <ul style={{ margin: "4px 0", paddingLeft: "20px" }}>
+                          <li><code>.cursor/skills/</code> - Project-level skills</li>
+                          <li><code>~/.cursor/skills/</code> - Global skills (available in all projects)</li>
+                        </ul>
+                      </div>
+                      <div className="settings-help" style={{ marginTop: "8px" }}>
+                        View and manage skills in Cursor Settings → Rules → &quot;Agent Decides&quot; section.
+                        Invoke manually with <code>/</code> in chat to search skills.
                       </div>
                     </div>
 
