@@ -25,7 +25,7 @@ import { useThreadRows } from "../hooks/useThreadRows";
 import { getUsageLabels } from "../utils/usageLabels";
 import { formatRelativeTimeShort } from "../../../utils/time";
 
-const COLLAPSED_GROUPS_STORAGE_KEY = "codexmonitor.collapsedGroups";
+const COLLAPSED_GROUPS_STORAGE_KEY = "geminimonitor.collapsedGroups";
 const UNGROUPED_COLLAPSE_ID = "__ungrouped__";
 const ADD_MENU_WIDTH = 200;
 
@@ -225,7 +225,7 @@ export function Sidebar({
     ? accountEmail
     : accountInfo?.type === "apikey"
       ? "API key"
-      : "Sign in to Codex";
+      : "Sign in to Gemini";
   const accountActionLabel = accountEmail ? "Switch account" : "Sign in";
   const showAccountSwitcher = Boolean(activeWorkspaceId);
   const accountSwitchDisabled = accountSwitching || !activeWorkspaceId;

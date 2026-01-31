@@ -2,7 +2,7 @@
   "app": {
     "windows": [
       {
-        "title": "CodexMonitor",
+        "title": "GeminiMonitor",
         "width": 1200,
         "height": 700,
         "minWidth": 360,

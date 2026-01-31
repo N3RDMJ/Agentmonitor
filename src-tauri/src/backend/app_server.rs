@@ -13,7 +13,7 @@ use tokio::sync::{mpsc, oneshot, Mutex};
 use tokio::time::timeout;
 
 use crate::backend::events::{AppServerEvent, EventSink};
-use crate::codex::args::apply_codex_args;
+use crate::gemini::args::apply_gemini_args;
 use crate::types::WorkspaceEntry;
 
 fn extract_thread_id(value: &Value) -> Option<String> {
@@ -82,7 +82,7 @@ impl WorkspaceSession {
     }
 }
 
-pub(crate) fn build_codex_path_env(codex_bin: Option<&str>) -> Option<String> {
+pub(crate) fn build_gemini_path_env(gemini_bin: Option<&str>) -> Option<String> {
     let mut paths: Vec<String> = env::var("PATH")
         .unwrap_or_default()
         .split(':')
@@ -105,6 +105,8 @@ pub(crate) fn build_codex_path_env(codex_bin: Option<&str>) -> Option<String> {
         extras.push(format!("{home}/.local/share/mise/shims"));
         extras.push(format!("{home}/.cargo/bin"));
         extras.push(format!("{home}/.bun/bin"));
+        // Add Google Cloud SDK path for gemini
+        extras.push(format!("{home}/google-cloud-sdk/bin"));
         let nvm_root = Path::new(&home).join(".nvm/versions/node");
         if let Ok(entries) = std::fs::read_dir(nvm_root) {
             for entry in entries.flatten() {
@@ -115,7 +117,7 @@ pub(crate) fn build_codex_path_env(codex_bin: Option<&str>) -> Option<String> {
             }
         }
     }
-    if let Some(bin_path) = codex_bin.filter(|value| !value.trim().is_empty()) {
+    if let Some(bin_path) = gemini_bin.filter(|value| !value.trim().is_empty()) {
         let parent = Path::new(bin_path).parent();
         if let Some(parent) = parent {
             extras.push(parent.to_string_lossy().to_string());
@@ -133,22 +135,22 @@ pub(crate) fn build_codex_path_env(codex_bin: Option<&str>) -> Option<String> {
     }
 }
 
-pub(crate) fn build_codex_command_with_bin(codex_bin: Option<String>) -> Command {
-    let bin = codex_bin
+pub(crate) fn build_gemini_command_with_bin(gemini_bin: Option<String>) -> Command {
+    let bin = gemini_bin
         .clone()
         .filter(|value| !value.trim().is_empty())
-        .unwrap_or_else(|| "codex".into());
+        .unwrap_or_else(|| "gemini".into());
     let mut command = Command::new(bin);
-    if let Some(path_env) = build_codex_path_env(codex_bin.as_deref()) {
+    if let Some(path_env) = build_gemini_path_env(gemini_bin.as_deref()) {
         command.env("PATH", path_env);
     }
     command
 }
 
-pub(crate) async fn check_codex_installation(
-    codex_bin: Option<String>,
+pub(crate) async fn check_gemini_installation(
+    gemini_bin: Option<String>,
 ) -> Result<Option<String>, String> {
-    let mut command = build_codex_command_with_bin(codex_bin);
+    let mut command = build_gemini_command_with_bin(gemini_bin);
     command.arg("--version");
     command.stdout(std::process::Stdio::piped());
     command.stderr(std::process::Stdio::piped());
@@ -156,7 +158,7 @@ pub(crate) async fn check_codex_installation(
     let output = match timeout(Duration::from_secs(5), command.output()).await {
         Ok(result) => result.map_err(|e| {
             if e.kind() == ErrorKind::NotFound {
-                "Codex CLI not found. Install Codex and ensure `codex` is on your PATH."
+                "Gemini CLI not found. Install Gemini CLI and ensure `gemini` is on your PATH."
                     .to_string()
             } else {
                 e.to_string()
@@ -164,7 +166,7 @@ pub(crate) async fn check_codex_installation(
         })?,
         Err(_) => {
             return Err(
-                "Timed out while checking Codex CLI. Make sure `codex --version` runs in Terminal."
+                "Timed out while checking Gemini CLI. Make sure `gemini --version` runs in Terminal."
                     .to_string(),
             );
         }
@@ -180,12 +182,12 @@ pub(crate) async fn check_codex_installation(
         };
         if detail.is_empty() {
             return Err(
-                "Codex CLI failed to start. Try running `codex --version` in Terminal."
+                "Gemini CLI failed to start. Try running `gemini --version` in Terminal."
                     .to_string(),
             );
         }
         return Err(format!(
-            "Codex CLI failed to start: {detail}. Try running `codex --version` in Terminal."
+            "Gemini CLI failed to start: {detail}. Try running `gemini --version` in Terminal."
         ));
     }
 
@@ -195,25 +197,26 @@ pub(crate) async fn check_codex_installation(
 
 pub(crate) async fn spawn_workspace_session<E: EventSink>(
     entry: WorkspaceEntry,
-    default_codex_bin: Option<String>,
-    codex_args: Option<String>,
-    codex_home: Option<PathBuf>,
+    default_gemini_bin: Option<String>,
+    gemini_args: Option<String>,
+    gemini_home: Option<PathBuf>,
     client_version: String,
     event_sink: E,
 ) -> Result<Arc<WorkspaceSession>, String> {
-    let codex_bin = entry
-        .codex_bin
+    let gemini_bin = entry
+        .gemini_bin
         .clone()
         .filter(|value| !value.trim().is_empty())
-        .or(default_codex_bin);
-    let _ = check_codex_installation(codex_bin.clone()).await?;
+        .or(default_gemini_bin);
+    let _ = check_gemini_installation(gemini_bin.clone()).await?;
 
-    let mut command = build_codex_command_with_bin(codex_bin);
-    apply_codex_args(&mut command, codex_args.as_deref())?;
+    let mut command = build_gemini_command_with_bin(gemini_bin);
+    apply_gemini_args(&mut command, gemini_args.as_deref())?;
     command.current_dir(&entry.path);
-    command.arg("app-server");
-    if let Some(codex_home) = codex_home {
-        command.env("CODEX_HOME", codex_home);
+    // Use Gemini's sandbox mode
+    command.arg("sandbox");
+    if let Some(gemini_home) = gemini_home {
+        command.env("GEMINI_HOME", gemini_home);
     }
     command.stdin(std::process::Stdio::piped());
     command.stdout(std::process::Stdio::piped());
@@ -248,7 +251,7 @@ pub(crate) async fn spawn_workspace_session<E: EventSink>(
                     let payload = AppServerEvent {
                         workspace_id: workspace_id.clone(),
                         message: json!({
-                            "method": "codex/parseError",
+                            "method": "gemini/parseError",
                             "params": { "error": err.to_string(), "raw": line },
                         }),
                     };
@@ -323,7 +326,7 @@ pub(crate) async fn spawn_workspace_session<E: EventSink>(
             let payload = AppServerEvent {
                 workspace_id: workspace_id.clone(),
                 message: json!({
-                    "method": "codex/stderr",
+                    "method": "gemini/stderr",
                     "params": { "message": line },
                 }),
             };
@@ -333,8 +336,8 @@ pub(crate) async fn spawn_workspace_session<E: EventSink>(
 
     let init_params = json!({
         "clientInfo": {
-            "name": "codex_monitor",
-            "title": "CodexMonitor",
+            "name": "gemini_monitor",
+            "title": "GeminiMonitor",
             "version": client_version
         }
     });
@@ -349,7 +352,7 @@ pub(crate) async fn spawn_workspace_session<E: EventSink>(
             let mut child = session.child.lock().await;
             let _ = child.kill().await;
             return Err(
-                "Codex app-server did not respond to initialize. Check that `codex app-server` works in Terminal."
+                "Gemini sandbox did not respond to initialize. Check that `gemini sandbox` works in Terminal."
                     .to_string(),
             );
         }
@@ -360,7 +363,7 @@ pub(crate) async fn spawn_workspace_session<E: EventSink>(
     let payload = AppServerEvent {
         workspace_id: entry.id.clone(),
         message: json!({
-            "method": "codex/connected",
+            "method": "gemini/connected",
             "params": { "workspaceId": entry.id.clone() }
         }),
     };

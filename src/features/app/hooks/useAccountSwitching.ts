@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { cancelCodexLogin, runCodexLogin } from "../../../services/tauri";
+import { cancelGeminiLogin, runGeminiLogin } from "../../../services/tauri";
 import type { AccountSnapshot } from "../../../types";
 
 type UseAccountSwitchingArgs = {
@@ -34,13 +34,13 @@ export function useAccountSwitching({
     return accountByWorkspace[activeWorkspaceId] ?? null;
   }, [activeWorkspaceId, accountByWorkspace]);
 
-  const isCodexLoginCanceled = useCallback((error: unknown) => {
+  const isGeminiLoginCanceled = useCallback((error: unknown) => {
     const message =
       typeof error === "string" ? error : error instanceof Error ? error.message : "";
     const normalized = message.toLowerCase();
     return (
-      normalized.includes("codex login canceled") ||
-      normalized.includes("codex login cancelled") ||
+      normalized.includes("gemini login canceled") ||
+      normalized.includes("gemini login cancelled") ||
       normalized.includes("request canceled")
     );
   }, []);
@@ -52,14 +52,14 @@ export function useAccountSwitching({
     accountSwitchCanceledRef.current = false;
     setAccountSwitching(true);
     try {
-      await runCodexLogin(activeWorkspaceId);
+      await runGeminiLogin(activeWorkspaceId);
       if (accountSwitchCanceledRef.current) {
         return;
       }
       await refreshAccountInfo(activeWorkspaceId);
       await refreshAccountRateLimits(activeWorkspaceId);
     } catch (error) {
-      if (accountSwitchCanceledRef.current || isCodexLoginCanceled(error)) {
+      if (accountSwitchCanceledRef.current || isGeminiLoginCanceled(error)) {
         return;
       }
       alertError(error);
@@ -73,7 +73,7 @@ export function useAccountSwitching({
     refreshAccountInfo,
     refreshAccountRateLimits,
     alertError,
-    isCodexLoginCanceled,
+    isGeminiLoginCanceled,
   ]);
 
   const handleCancelSwitchAccount = useCallback(async () => {
@@ -82,7 +82,7 @@ export function useAccountSwitching({
     }
     accountSwitchCanceledRef.current = true;
     try {
-      await cancelCodexLogin(activeWorkspaceId);
+      await cancelGeminiLogin(activeWorkspaceId);
     } catch (error) {
       alertError(error);
     } finally {

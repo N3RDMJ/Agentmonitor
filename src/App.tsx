@@ -164,9 +164,9 @@ function MainApp() {
   useLiquidGlassEffect({ reduceTransparency, onDebug: addDebugEntry });
   const [accessMode, setAccessMode] = useState<AccessMode>("current");
   const [activeTab, setActiveTab] = useState<
-    "projects" | "codex" | "git" | "log"
-  >("codex");
-  const tabletTab = activeTab === "projects" ? "codex" : activeTab;
+    "projects" | "gemini" | "git" | "log"
+  >("gemini");
+  const tabletTab = activeTab === "projects" ? "gemini" : activeTab;
   const {
     workspaces,
     workspaceGroups,
@@ -183,7 +183,7 @@ function MainApp() {
     connectWorkspace,
     markWorkspaceConnected,
     updateWorkspaceSettings,
-    updateWorkspaceCodexBin,
+    updateWorkspaceGeminiBin,
     createWorkspaceGroup,
     renameWorkspaceGroup,
     moveWorkspaceGroup,
@@ -809,7 +809,7 @@ function MainApp() {
     connectWorkspace,
     onSelectWorkspace: selectWorkspace,
     onWorktreeCreated: handleWorktreeCreated,
-    onCompactActivate: isCompact ? () => setActiveTab("codex") : undefined,
+    onCompactActivate: isCompact ? () => setActiveTab("gemini") : undefined,
     onError: (message) => {
       addDebugEntry({
         id: `${Date.now()}-client-add-worktree-error`,
@@ -884,7 +884,7 @@ function MainApp() {
     onSelectWorkspace: selectWorkspace,
     resolveProjectContext: resolveCloneProjectContext,
     persistProjectCopiesFolder,
-    onCompactActivate: isCompact ? () => setActiveTab("codex") : undefined,
+    onCompactActivate: isCompact ? () => setActiveTab("gemini") : undefined,
     onError: (message) => {
       addDebugEntry({
         id: `${Date.now()}-client-add-clone-error`,
@@ -1293,7 +1293,7 @@ function MainApp() {
       return;
     }
     if (activeTab === "projects") {
-      setActiveTab("codex");
+      setActiveTab("gemini");
     }
   }, [activeTab, isTablet]);
 
@@ -1418,7 +1418,7 @@ function MainApp() {
       selectWorkspace(workspaceId);
       setActiveThreadId(threadId, workspaceId);
       if (isCompact) {
-        setActiveTab("codex");
+        setActiveTab("gemini");
       }
     },
     [
@@ -1482,7 +1482,7 @@ function MainApp() {
 
   const showComposer = (!isCompact
     ? centerMode === "chat" || centerMode === "diff"
-    : (isTablet ? tabletTab : activeTab) === "codex") && !showWorkspaceHome;
+    : (isTablet ? tabletTab : activeTab) === "gemini") && !showWorkspaceHome;
   const showGitDetail = Boolean(selectedDiffPath) && isPhone;
   const isThreadOpen = Boolean(activeThreadId && showComposer);
 
@@ -1562,7 +1562,7 @@ function MainApp() {
     debugPanelNode,
     debugPanelFullNode,
     terminalDockNode,
-    compactEmptyCodexNode,
+    compactEmptyGeminiNode,
     compactEmptyGitNode,
     compactGitBackNode,
   } = useLayoutNodes({
@@ -1613,7 +1613,7 @@ function MainApp() {
     onConnectWorkspace: async (workspace) => {
       await connectWorkspace(workspace);
       if (isCompact) {
-        setActiveTab("codex");
+        setActiveTab("gemini");
       }
     },
     onAddAgent: handleAddAgent,
@@ -1692,7 +1692,7 @@ function MainApp() {
       selectWorkspace(workspaceId);
       setActiveThreadId(threadId, workspaceId);
       if (isCompact) {
-        setActiveTab("codex");
+        setActiveTab("gemini");
       }
     },
     activeWorkspace,
@@ -2083,7 +2083,7 @@ function MainApp() {
         debugPanelNode={debugPanelNode}
         debugPanelFullNode={debugPanelFullNode}
         terminalDockNode={terminalDockNode}
-        compactEmptyCodexNode={compactEmptyCodexNode}
+        compactEmptyGeminiNode={compactEmptyGeminiNode}
         compactEmptyGitNode={compactEmptyGitNode}
         compactGitBackNode={compactGitBackNode}
         onSidebarResizeStart={onSidebarResizeStart}
@@ -2132,8 +2132,8 @@ function MainApp() {
             await queueSaveSettings(next);
           },
           onRunDoctor: doctor,
-          onUpdateWorkspaceCodexBin: async (id, codexBin) => {
-            await updateWorkspaceCodexBin(id, codexBin);
+          onUpdateWorkspaceGeminiBin: async (id, geminiBin) => {
+            await updateWorkspaceGeminiBin(id, geminiBin);
           },
           onUpdateWorkspaceSettings: async (id, settings) => {
             await updateWorkspaceSettings(id, settings);

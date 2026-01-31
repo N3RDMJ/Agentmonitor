@@ -27,8 +27,8 @@ vi.mock("../../git/hooks/useGitCommitDiffs", () => ({
 
 const workspace: WorkspaceInfo = {
   id: "workspace-1",
-  name: "CodexMonitor",
-  path: "/tmp/codex-monitor",
+  name: "GeminiMonitor",
+  path: "/tmp/gemini-monitor",
   connected: true,
   settings: { sidebarCollapsed: false },
 };
@@ -39,8 +39,8 @@ function makeProps(overrides?: Partial<Parameters<typeof useGitPanelController>[
     gitDiffPreloadEnabled: false,
     isCompact: false,
     isTablet: false,
-    activeTab: "codex" as const,
-    tabletTab: "codex" as const,
+    activeTab: "gemini" as const,
+    tabletTab: "gemini" as const,
     setActiveTab: vi.fn(),
     prDiffs: [],
     prDiffsLoading: false,

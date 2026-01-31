@@ -1,12 +1,12 @@
 #[allow(dead_code)]
 #[path = "../backend/mod.rs"]
 mod backend;
-#[path = "../codex/args.rs"]
-mod codex_args;
-#[path = "../codex/home.rs"]
-mod codex_home;
-#[path = "../codex/config.rs"]
-mod codex_config;
+#[path = "../gemini/args.rs"]
+mod gemini_args;
+#[path = "../gemini/home.rs"]
+mod gemini_home;
+#[path = "../gemini/config.rs"]
+mod gemini_config;
 #[path = "../files/io.rs"]
 mod file_io;
 #[path = "../files/ops.rs"]
@@ -28,15 +28,15 @@ mod workspace_settings;
 mod types;
 
 // Provide feature-style module paths for shared cores when compiled in the daemon.
-mod codex {
+mod gemini {
     pub(crate) mod args {
-        pub(crate) use crate::codex_args::*;
+        pub(crate) use crate::gemini_args::*;
     }
     pub(crate) mod config {
-        pub(crate) use crate::codex_config::*;
+        pub(crate) use crate::gemini_config::*;
     }
     pub(crate) mod home {
-        pub(crate) use crate::codex_home::*;
+        pub(crate) use crate::gemini_home::*;
     }
 }
 
@@ -72,7 +72,7 @@ use backend::app_server::{
 };
 use backend::events::{AppServerEvent, EventSink, TerminalOutput};
 use storage::{read_settings, read_workspaces};
-use shared::{codex_core, files_core, git_core, settings_core, workspaces_core, worktree_core};
+use shared::{gemini_core, files_core, git_core, settings_core, workspaces_core, worktree_core};
 use workspace_settings::apply_workspace_settings_update;
 use types::{
     AppSettings, WorkspaceEntry, WorkspaceInfo, WorkspaceSettings, WorktreeSetupStatus,
@@ -85,14 +85,14 @@ fn spawn_with_client(
     client_version: String,
     entry: WorkspaceEntry,
     default_bin: Option<String>,
-    codex_args: Option<String>,
-    codex_home: Option<PathBuf>,
+    gemini_args: Option<String>,
+    gemini_home: Option<PathBuf>,
 ) -> impl std::future::Future<Output = Result<Arc<WorkspaceSession>, String>> {
     spawn_workspace_session(
         entry,
         default_bin,
-        codex_args,
-        codex_home,
+        gemini_args,
+        gemini_home,
         client_version,
         event_sink,
     )
@@ -134,7 +134,7 @@ struct DaemonState {
     settings_path: PathBuf,
     app_settings: Mutex<AppSettings>,
     event_sink: DaemonEventSink,
-    codex_login_cancels: Mutex<HashMap<String, oneshot::Sender<()>>>,
+    gemini_login_cancels: Mutex<HashMap<String, oneshot::Sender<()>>>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -157,7 +157,7 @@ impl DaemonState {
             settings_path,
             app_settings: Mutex::new(app_settings),
             event_sink,
-            codex_login_cancels: Mutex::new(HashMap::new()),
+            gemini_login_cancels: Mutex::new(HashMap::new()),
         }
     }
 
@@ -172,25 +172,25 @@ impl DaemonState {
     async fn add_workspace(
         &self,
         path: String,
-        codex_bin: Option<String>,
+        gemini_bin: Option<String>,
         client_version: String,
     ) -> Result<WorkspaceInfo, String> {
         let client_version = client_version.clone();
         workspaces_core::add_workspace_core(
             path,
-            codex_bin,
+            gemini_bin,
             &self.workspaces,
             &self.sessions,
             &self.app_settings,
             &self.storage_path,
-            move |entry, default_bin, codex_args, codex_home| {
+            move |entry, default_bin, gemini_args, gemini_home| {
                 spawn_with_client(
                     self.event_sink.clone(),
                     client_version.clone(),
                     entry,
                     default_bin,
-                    codex_args,
-                    codex_home,
+                    gemini_args,
+                    gemini_home,
                 )
             },
         )
@@ -227,14 +227,14 @@ impl DaemonState {
             |root, args| {
                 workspaces_core::run_git_command_unit(root, args, git_core::run_git_command_owned)
             },
-            move |entry, default_bin, codex_args, codex_home| {
+            move |entry, default_bin, gemini_args, gemini_home| {
                 spawn_with_client(
                     self.event_sink.clone(),
                     client_version.clone(),
                     entry,
                     default_bin,
-                    codex_args,
-                    codex_home,
+                    gemini_args,
+                    gemini_home,
                 )
             },
         )
@@ -319,14 +319,14 @@ impl DaemonState {
             |root, args| {
                 workspaces_core::run_git_command_unit(root, args, git_core::run_git_command_owned)
             },
-            move |entry, default_bin, codex_args, codex_home| {
+            move |entry, default_bin, gemini_args, gemini_home| {
                 spawn_with_client(
                     self.event_sink.clone(),
                     client_version.clone(),
                     entry,
                     default_bin,
-                    codex_args,
-                    codex_home,
+                    gemini_args,
+                    gemini_home,
                 )
             },
         )
@@ -392,28 +392,28 @@ impl DaemonState {
             |workspaces, workspace_id, next_settings| {
                 apply_workspace_settings_update(workspaces, workspace_id, next_settings)
             },
-            move |entry, default_bin, codex_args, codex_home| {
+            move |entry, default_bin, gemini_args, gemini_home| {
                 spawn_with_client(
                     self.event_sink.clone(),
                     client_version.clone(),
                     entry,
                     default_bin,
-                    codex_args,
-                    codex_home,
+                    gemini_args,
+                    gemini_home,
                 )
             },
         )
         .await
     }
 
-    async fn update_workspace_codex_bin(
+    async fn update_workspace_gemini_bin(
         &self,
         id: String,
-        codex_bin: Option<String>,
+        gemini_bin: Option<String>,
     ) -> Result<WorkspaceInfo, String> {
-        workspaces_core::update_workspace_codex_bin_core(
+        workspaces_core::update_workspace_gemini_bin_core(
             id,
-            codex_bin,
+            gemini_bin,
             &self.workspaces,
             &self.sessions,
             &self.storage_path,
@@ -435,14 +435,14 @@ impl DaemonState {
             &self.workspaces,
             &self.sessions,
             &self.app_settings,
-            move |entry, default_bin, codex_args, codex_home| {
+            move |entry, default_bin, gemini_args, gemini_home| {
                 spawn_with_client(
                     self.event_sink.clone(),
                     client_version.clone(),
                     entry,
                     default_bin,
-                    codex_args,
-                    codex_home,
+                    gemini_args,
+                    gemini_home,
                 )
             },
         )
@@ -499,15 +499,15 @@ impl DaemonState {
     }
 
     async fn start_thread(&self, workspace_id: String) -> Result<Value, String> {
-        codex_core::start_thread_core(&self.sessions, workspace_id).await
+        gemini_core::start_thread_core(&self.sessions, workspace_id).await
     }
 
     async fn resume_thread(&self, workspace_id: String, thread_id: String) -> Result<Value, String> {
-        codex_core::resume_thread_core(&self.sessions, workspace_id, thread_id).await
+        gemini_core::resume_thread_core(&self.sessions, workspace_id, thread_id).await
     }
 
     async fn fork_thread(&self, workspace_id: String, thread_id: String) -> Result<Value, String> {
-        codex_core::fork_thread_core(&self.sessions, workspace_id, thread_id).await
+        gemini_core::fork_thread_core(&self.sessions, workspace_id, thread_id).await
     }
 
     async fn list_threads(
@@ -516,7 +516,7 @@ impl DaemonState {
         cursor: Option<String>,
         limit: Option<u32>,
     ) -> Result<Value, String> {
-        codex_core::list_threads_core(&self.sessions, workspace_id, cursor, limit).await
+        gemini_core::list_threads_core(&self.sessions, workspace_id, cursor, limit).await
     }
 
     async fn list_mcp_server_status(
@@ -525,11 +525,11 @@ impl DaemonState {
         cursor: Option<String>,
         limit: Option<u32>,
     ) -> Result<Value, String> {
-        codex_core::list_mcp_server_status_core(&self.sessions, workspace_id, cursor, limit).await
+        gemini_core::list_mcp_server_status_core(&self.sessions, workspace_id, cursor, limit).await
     }
 
     async fn archive_thread(&self, workspace_id: String, thread_id: String) -> Result<Value, String> {
-        codex_core::archive_thread_core(&self.sessions, workspace_id, thread_id).await
+        gemini_core::archive_thread_core(&self.sessions, workspace_id, thread_id).await
     }
 
     async fn send_user_message(
@@ -543,7 +543,7 @@ impl DaemonState {
         images: Option<Vec<String>>,
         collaboration_mode: Option<Value>,
     ) -> Result<Value, String> {
-        codex_core::send_user_message_core(
+        gemini_core::send_user_message_core(
             &self.sessions,
             workspace_id,
             thread_id,
@@ -563,7 +563,7 @@ impl DaemonState {
         thread_id: String,
         turn_id: String,
     ) -> Result<Value, String> {
-        codex_core::turn_interrupt_core(&self.sessions, workspace_id, thread_id, turn_id).await
+        gemini_core::turn_interrupt_core(&self.sessions, workspace_id, thread_id, turn_id).await
     }
 
     async fn start_review(
@@ -573,42 +573,42 @@ impl DaemonState {
         target: Value,
         delivery: Option<String>,
     ) -> Result<Value, String> {
-        codex_core::start_review_core(&self.sessions, workspace_id, thread_id, target, delivery)
+        gemini_core::start_review_core(&self.sessions, workspace_id, thread_id, target, delivery)
             .await
     }
 
     async fn model_list(&self, workspace_id: String) -> Result<Value, String> {
-        codex_core::model_list_core(&self.sessions, workspace_id).await
+        gemini_core::model_list_core(&self.sessions, workspace_id).await
     }
 
     async fn collaboration_mode_list(&self, workspace_id: String) -> Result<Value, String> {
-        codex_core::collaboration_mode_list_core(&self.sessions, workspace_id).await
+        gemini_core::collaboration_mode_list_core(&self.sessions, workspace_id).await
     }
 
     async fn account_rate_limits(&self, workspace_id: String) -> Result<Value, String> {
-        codex_core::account_rate_limits_core(&self.sessions, workspace_id).await
+        gemini_core::account_rate_limits_core(&self.sessions, workspace_id).await
     }
 
     async fn account_read(&self, workspace_id: String) -> Result<Value, String> {
-        codex_core::account_read_core(&self.sessions, &self.workspaces, workspace_id).await
+        gemini_core::account_read_core(&self.sessions, &self.workspaces, workspace_id).await
     }
 
-    async fn codex_login(&self, workspace_id: String) -> Result<Value, String> {
-        codex_core::codex_login_core(
+    async fn gemini_login(&self, workspace_id: String) -> Result<Value, String> {
+        gemini_core::gemini_login_core(
             &self.workspaces,
             &self.app_settings,
-            &self.codex_login_cancels,
+            &self.gemini_login_cancels,
             workspace_id,
         )
         .await
     }
 
-    async fn codex_login_cancel(&self, workspace_id: String) -> Result<Value, String> {
-        codex_core::codex_login_cancel_core(&self.codex_login_cancels, workspace_id).await
+    async fn gemini_login_cancel(&self, workspace_id: String) -> Result<Value, String> {
+        gemini_core::gemini_login_cancel_core(&self.gemini_login_cancels, workspace_id).await
     }
 
     async fn skills_list(&self, workspace_id: String) -> Result<Value, String> {
-        codex_core::skills_list_core(&self.sessions, workspace_id).await
+        gemini_core::skills_list_core(&self.sessions, workspace_id).await
     }
 
     async fn respond_to_server_request(
@@ -617,7 +617,7 @@ impl DaemonState {
         request_id: Value,
         result: Value,
     ) -> Result<Value, String> {
-        codex_core::respond_to_server_request_core(&self.sessions, workspace_id, request_id, result)
+        gemini_core::respond_to_server_request_core(&self.sessions, workspace_id, request_id, result)
             .await?;
         Ok(json!({ "ok": true }))
     }
@@ -627,11 +627,11 @@ impl DaemonState {
         workspace_id: String,
         command: Vec<String>,
     ) -> Result<Value, String> {
-        codex_core::remember_approval_rule_core(&self.workspaces, workspace_id, command).await
+        gemini_core::remember_approval_rule_core(&self.workspaces, workspace_id, command).await
     }
 
     async fn get_config_model(&self, workspace_id: String) -> Result<Value, String> {
-        codex_core::get_config_model_core(&self.workspaces, workspace_id).await
+        gemini_core::get_config_model_core(&self.workspaces, workspace_id).await
     }
 }
 
@@ -729,20 +729,20 @@ fn default_data_dir() -> PathBuf {
     if let Ok(xdg) = env::var("XDG_DATA_HOME") {
         let trimmed = xdg.trim();
         if !trimmed.is_empty() {
-            return PathBuf::from(trimmed).join("codex-monitor-daemon");
+            return PathBuf::from(trimmed).join("gemini-monitor-daemon");
         }
     }
     let home = env::var("HOME").unwrap_or_else(|_| ".".to_string());
     PathBuf::from(home)
         .join(".local")
         .join("share")
-        .join("codex-monitor-daemon")
+        .join("gemini-monitor-daemon")
 }
 
 fn usage() -> String {
     format!(
         "\
-USAGE:\n  codex-monitor-daemon [--listen <addr>] [--data-dir <path>] [--token <token> | --insecure-no-auth]\n\n\
+USAGE:\n  gemini-monitor-daemon [--listen <addr>] [--data-dir <path>] [--token <token> | --insecure-no-auth]\n\n\
 OPTIONS:\n  --listen <addr>        Bind address (default: {DEFAULT_LISTEN_ADDR})\n  --data-dir <path>      Data dir holding workspaces.json/settings.json\n  --token <token>        Shared token required by clients\n  --insecure-no-auth      Disable auth (dev only)\n  -h, --help             Show this help\n"
     )
 }
@@ -751,7 +751,7 @@ fn parse_args() -> Result<DaemonConfig, String> {
     let mut listen = DEFAULT_LISTEN_ADDR
         .parse::<SocketAddr>()
         .map_err(|err| err.to_string())?;
-    let mut token = env::var("CODEX_MONITOR_DAEMON_TOKEN")
+    let mut token = env::var("GEMINI_MONITOR_DAEMON_TOKEN")
         .ok()
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty());
@@ -795,7 +795,7 @@ fn parse_args() -> Result<DaemonConfig, String> {
 
     if token.is_none() && !insecure_no_auth {
         return Err(
-            "Missing --token (or set CODEX_MONITOR_DAEMON_TOKEN). Use --insecure-no-auth for local dev only."
+            "Missing --token (or set GEMINI_MONITOR_DAEMON_TOKEN). Use --insecure-no-auth for local dev only."
                 .to_string(),
         );
     }
@@ -951,8 +951,8 @@ async fn handle_rpc_request(
         }
         "add_workspace" => {
             let path = parse_string(&params, "path")?;
-            let codex_bin = parse_optional_string(&params, "codex_bin");
-            let workspace = state.add_workspace(path, codex_bin, client_version).await?;
+            let gemini_bin = parse_optional_string(&params, "gemini_bin");
+            let workspace = state.add_workspace(path, gemini_bin, client_version).await?;
             serde_json::to_value(workspace).map_err(|err| err.to_string())
         }
         "add_worktree" => {
@@ -1016,10 +1016,10 @@ async fn handle_rpc_request(
                 .await?;
             serde_json::to_value(workspace).map_err(|err| err.to_string())
         }
-        "update_workspace_codex_bin" => {
+        "update_workspace_gemini_bin" => {
             let id = parse_string(&params, "id")?;
-            let codex_bin = parse_optional_string(&params, "codex_bin");
-            let workspace = state.update_workspace_codex_bin(id, codex_bin).await?;
+            let gemini_bin = parse_optional_string(&params, "gemini_bin");
+            let workspace = state.update_workspace_gemini_bin(id, gemini_bin).await?;
             serde_json::to_value(workspace).map_err(|err| err.to_string())
         }
         "list_workspace_files" => {
@@ -1066,8 +1066,8 @@ async fn handle_rpc_request(
             let updated = state.update_app_settings(settings).await?;
             serde_json::to_value(updated).map_err(|err| err.to_string())
         }
-        "get_codex_config_path" => {
-            let path = settings_core::get_codex_config_path_core()?;
+        "get_gemini_config_path" => {
+            let path = settings_core::get_gemini_config_path_core()?;
             Ok(Value::String(path))
         }
         "get_config_model" => {
@@ -1160,13 +1160,13 @@ async fn handle_rpc_request(
             let workspace_id = parse_string(&params, "workspaceId")?;
             state.account_read(workspace_id).await
         }
-        "codex_login" => {
+        "gemini_login" => {
             let workspace_id = parse_string(&params, "workspaceId")?;
-            state.codex_login(workspace_id).await
+            state.gemini_login(workspace_id).await
         }
-        "codex_login_cancel" => {
+        "gemini_login_cancel" => {
             let workspace_id = parse_string(&params, "workspaceId")?;
-            state.codex_login_cancel(workspace_id).await
+            state.gemini_login_cancel(workspace_id).await
         }
         "skills_list" => {
             let workspace_id = parse_string(&params, "workspaceId")?;
@@ -1337,7 +1337,7 @@ fn main() {
             .await
             .unwrap_or_else(|err| panic!("failed to bind {}: {err}", config.listen));
         eprintln!(
-            "codex-monitor-daemon listening on {} (data dir: {})",
+            "gemini-monitor-daemon listening on {} (data dir: {})",
             config.listen,
             state
                 .storage_path

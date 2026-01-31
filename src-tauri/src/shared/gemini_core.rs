@@ -13,10 +13,10 @@ use tokio::time::timeout;
 #[cfg(target_os = "windows")]
 use tokio::process::Command;
 
-use crate::backend::app_server::{build_codex_command_with_bin, WorkspaceSession};
-use crate::codex::args::{apply_codex_args, resolve_workspace_codex_args};
-use crate::codex::config as codex_config;
-use crate::codex::home::{resolve_default_codex_home, resolve_workspace_codex_home};
+use crate::backend::app_server::{build_gemini_command_with_bin, WorkspaceSession};
+use crate::gemini::args::{apply_gemini_args, resolve_workspace_gemini_args};
+use crate::gemini::config as gemini_config;
+use crate::gemini::home::{resolve_default_gemini_home, resolve_workspace_gemini_home};
 use crate::rules;
 use crate::shared::account::{build_account_response, read_auth_account};
 use crate::types::{AppSettings, WorkspaceEntry};
@@ -49,14 +49,14 @@ async fn resolve_workspace_and_parent(
     Ok((entry, parent_entry))
 }
 
-async fn resolve_codex_home_for_workspace_core(
+async fn resolve_gemini_home_for_workspace_core(
     workspaces: &Mutex<HashMap<String, WorkspaceEntry>>,
     workspace_id: &str,
 ) -> Result<PathBuf, String> {
     let (entry, parent_entry) = resolve_workspace_and_parent(workspaces, workspace_id).await?;
-    resolve_workspace_codex_home(&entry, parent_entry.as_ref())
-        .or_else(resolve_default_codex_home)
-        .ok_or_else(|| "Unable to resolve CODEX_HOME".to_string())
+    resolve_workspace_gemini_home(&entry, parent_entry.as_ref())
+        .or_else(resolve_default_gemini_home)
+        .ok_or_else(|| "Unable to resolve GEMINI_HOME".to_string())
 }
 
 pub(crate) async fn start_thread_core(
@@ -269,17 +269,17 @@ pub(crate) async fn account_read_core(
     };
 
     let (entry, parent_entry) = resolve_workspace_and_parent(workspaces, &workspace_id).await?;
-    let codex_home = resolve_workspace_codex_home(&entry, parent_entry.as_ref())
-        .or_else(resolve_default_codex_home);
-    let fallback = read_auth_account(codex_home);
+    let gemini_home = resolve_workspace_gemini_home(&entry, parent_entry.as_ref())
+        .or_else(resolve_default_gemini_home);
+    let fallback = read_auth_account(gemini_home);
 
     Ok(build_account_response(response, fallback))
 }
 
-pub(crate) async fn codex_login_core(
+pub(crate) async fn gemini_login_core(
     workspaces: &Mutex<HashMap<String, WorkspaceEntry>>,
     app_settings: &Mutex<AppSettings>,
-    codex_login_cancels: &Mutex<HashMap<String, oneshot::Sender<()>>>,
+    gemini_login_cancels: &Mutex<HashMap<String, oneshot::Sender<()>>>,
     workspace_id: String,
 ) -> Result<Value, String> {
     let (entry, parent_entry, settings) = {
@@ -297,20 +297,20 @@ pub(crate) async fn codex_login_core(
         (entry, parent_entry, settings)
     };
 
-    let codex_bin = entry
-        .codex_bin
+    let gemini_bin = entry
+        .gemini_bin
         .clone()
         .filter(|value| !value.trim().is_empty())
-        .or(settings.codex_bin.clone());
-    let codex_args = resolve_workspace_codex_args(&entry, parent_entry.as_ref(), Some(&settings));
-    let codex_home = resolve_workspace_codex_home(&entry, parent_entry.as_ref())
-        .or_else(resolve_default_codex_home);
+        .or(settings.gemini_bin.clone());
+    let gemini_args = resolve_workspace_gemini_args(&entry, parent_entry.as_ref(), Some(&settings));
+    let gemini_home = resolve_workspace_gemini_home(&entry, parent_entry.as_ref())
+        .or_else(resolve_default_gemini_home);
 
-    let mut command = build_codex_command_with_bin(codex_bin);
-    if let Some(ref codex_home) = codex_home {
-        command.env("CODEX_HOME", codex_home);
+    let mut command = build_gemini_command_with_bin(gemini_bin);
+    if let Some(ref gemini_home) = gemini_home {
+        command.env("GEMINI_HOME", gemini_home);
     }
-    apply_codex_args(&mut command, codex_args.as_deref())?;
+    apply_gemini_args(&mut command, gemini_args.as_deref())?;
     command.arg("login");
     command.stdout(Stdio::piped());
     command.stderr(Stdio::piped());
@@ -318,7 +318,7 @@ pub(crate) async fn codex_login_core(
     let mut child = command.spawn().map_err(|error| error.to_string())?;
     let (cancel_tx, cancel_rx) = oneshot::channel::<()>();
     {
-        let mut cancels = codex_login_cancels.lock().await;
+        let mut cancels = gemini_login_cancels.lock().await;
         if let Some(existing) = cancels.remove(&workspace_id) {
             let _ = existing.send(());
         }
@@ -370,21 +370,21 @@ pub(crate) async fn codex_login_core(
             let _ = child.wait().await;
             cancel_task.abort();
             {
-                let mut cancels = codex_login_cancels.lock().await;
+                let mut cancels = gemini_login_cancels.lock().await;
                 cancels.remove(&workspace_id);
             }
-            return Err("Codex login timed out.".to_string());
+            return Err("Gemini login timed out.".to_string());
         }
     };
 
     cancel_task.abort();
     {
-        let mut cancels = codex_login_cancels.lock().await;
+        let mut cancels = gemini_login_cancels.lock().await;
         cancels.remove(&workspace_id);
     }
 
     if canceled.load(Ordering::Relaxed) {
-        return Err("Codex login canceled.".to_string());
+        return Err("Gemini login canceled.".to_string());
     }
 
     let stdout_bytes = match stdout_task.await {
@@ -414,21 +414,21 @@ pub(crate) async fn codex_login_core(
 
     if !status.success() {
         return Err(if detail.is_empty() {
-            "Codex login failed.".to_string()
+            "Gemini login failed.".to_string()
         } else {
-            format!("Codex login failed: {detail}")
+            format!("Gemini login failed: {detail}")
         });
     }
 
     Ok(json!({ "output": limited }))
 }
 
-pub(crate) async fn codex_login_cancel_core(
-    codex_login_cancels: &Mutex<HashMap<String, oneshot::Sender<()>>>,
+pub(crate) async fn gemini_login_cancel_core(
+    gemini_login_cancels: &Mutex<HashMap<String, oneshot::Sender<()>>>,
     workspace_id: String,
 ) -> Result<Value, String> {
     let cancel_tx = {
-        let mut cancels = codex_login_cancels.lock().await;
+        let mut cancels = gemini_login_cancels.lock().await;
         cancels.remove(&workspace_id)
     };
     let canceled = if let Some(tx) = cancel_tx {
@@ -473,8 +473,8 @@ pub(crate) async fn remember_approval_rule_core(
         return Err("empty command".to_string());
     }
 
-    let codex_home = resolve_codex_home_for_workspace_core(workspaces, &workspace_id).await?;
-    let rules_path = rules::default_rules_path(&codex_home);
+    let gemini_home = resolve_gemini_home_for_workspace_core(workspaces, &workspace_id).await?;
+    let rules_path = rules::default_rules_path(&gemini_home);
     rules::append_prefix_rule(&rules_path, &command)?;
 
     Ok(json!({
@@ -487,7 +487,7 @@ pub(crate) async fn get_config_model_core(
     workspaces: &Mutex<HashMap<String, WorkspaceEntry>>,
     workspace_id: String,
 ) -> Result<Value, String> {
-    let codex_home = resolve_codex_home_for_workspace_core(workspaces, &workspace_id).await?;
-    let model = codex_config::read_config_model(Some(codex_home))?;
+    let gemini_home = resolve_gemini_home_for_workspace_core(workspaces, &workspace_id).await?;
+    let model = gemini_config::read_config_model(Some(gemini_home))?;
     Ok(json!({ "model": model }))
 }

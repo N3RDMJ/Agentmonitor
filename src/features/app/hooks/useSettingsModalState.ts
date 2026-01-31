@@ -7,7 +7,7 @@ export type SettingsSection =
   | "shortcuts"
   | "open-apps"
   | "git"
-  | "codex"
+  | "gemini"
   | "experimental";
 
 export function useSettingsModalState() {

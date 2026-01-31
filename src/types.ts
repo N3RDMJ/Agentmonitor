@@ -3,8 +3,8 @@ export type WorkspaceSettings = {
   sortOrder?: number | null;
   groupId?: string | null;
   gitRoot?: string | null;
-  codexHome?: string | null;
-  codexArgs?: string | null;
+  geminiHome?: string | null;
+  geminiArgs?: string | null;
   launchScript?: string | null;
   worktreeSetupScript?: string | null;
 };
@@ -27,7 +27,7 @@ export type WorkspaceInfo = {
   name: string;
   path: string;
   connected: boolean;
-  codex_bin?: string | null;
+  gemini_bin?: string | null;
   kind?: WorkspaceKind;
   parentId?: string | null;
   worktree?: WorktreeInfo | null;
@@ -114,8 +114,8 @@ export type OpenAppTarget = {
 };
 
 export type AppSettings = {
-  codexBin: string | null;
-  codexArgs: string | null;
+  geminiBin: string | null;
+  geminiArgs: string | null;
   backendMode: BackendMode;
   remoteBackendHost: string;
   remoteBackendToken: string | null;
@@ -169,9 +169,9 @@ export type AppSettings = {
   selectedOpenAppId: string;
 };
 
-export type CodexDoctorResult = {
+export type GeminiDoctorResult = {
   ok: boolean;
-  codexBin: string | null;
+  geminiBin: string | null;
   version: string | null;
   appServerOk: boolean;
   details: string | null;

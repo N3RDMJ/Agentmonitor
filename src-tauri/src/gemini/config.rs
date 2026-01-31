@@ -41,7 +41,7 @@ pub(crate) fn write_unified_exec_enabled(enabled: bool) -> Result<(), String> {
 }
 
 fn read_feature_flag(key: &str) -> Result<Option<bool>, String> {
-    let Some(root) = resolve_default_codex_home() else {
+    let Some(root) = resolve_default_gemini_home() else {
         return Ok(None);
     };
     let contents = read_config_contents_from_root(&root)?;
@@ -49,7 +49,7 @@ fn read_feature_flag(key: &str) -> Result<Option<bool>, String> {
 }
 
 fn write_feature_flag(key: &str, enabled: bool) -> Result<(), String> {
-    let Some(root) = resolve_default_codex_home() else {
+    let Some(root) = resolve_default_gemini_home() else {
         return Ok(());
     };
     let policy = config_policy()?;
@@ -71,19 +71,24 @@ fn write_feature_flag(key: &str, enabled: bool) -> Result<(), String> {
 }
 
 pub(crate) fn config_toml_path() -> Option<PathBuf> {
-    resolve_default_codex_home().map(|home| home.join("config.toml"))
+    resolve_default_gemini_home().map(|home| home.join("config.toml"))
 }
 
-pub(crate) fn read_config_model(codex_home: Option<PathBuf>) -> Result<Option<String>, String> {
-    let root = codex_home.or_else(resolve_default_codex_home);
+pub(crate) fn read_config_model(gemini_home: Option<PathBuf>) -> Result<Option<String>, String> {
+    let root = gemini_home.or_else(resolve_default_gemini_home);
     let Some(root) = root else {
-        return Err("Unable to resolve CODEX_HOME".to_string());
+        return Err("Unable to resolve GEMINI_HOME".to_string());
     };
+    // First try reading from settings.json (Gemini CLI native format)
+    if let Ok(Some(model)) = crate::gemini::settings::read_settings_model(Some(root.clone())) {
+        return Ok(Some(model));
+    }
+    // Fall back to config.toml for backwards compatibility
     read_config_model_from_root(&root)
 }
 
-fn resolve_default_codex_home() -> Option<PathBuf> {
-    crate::codex::home::resolve_default_codex_home()
+fn resolve_default_gemini_home() -> Option<PathBuf> {
+    crate::gemini::home::resolve_default_gemini_home()
 }
 
 fn config_policy() -> Result<crate::files::policy::FilePolicy, String> {
