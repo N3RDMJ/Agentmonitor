@@ -112,7 +112,7 @@ export function useThreadEventHandlers({
   const onAppServerEvent = useCallback(
     (event: AppServerEvent) => {
       const method = String(event.message?.method ?? "");
-      const inferredSource = method === "codex/stderr" ? "stderr" : "event";
+      const inferredSource = method === "gemini/stderr" ? "stderr" : "event";
       onDebug?.({
         id: `${Date.now()}-server-event`,
         timestamp: Date.now(),

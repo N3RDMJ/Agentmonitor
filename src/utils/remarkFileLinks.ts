@@ -1,4 +1,4 @@
-const FILE_LINK_PROTOCOL = "codex-file:";
+const FILE_LINK_PROTOCOL = "gemini-file:";
 
 const FILE_PATH_PATTERN =
   /(\/[^\s`"'<>]+|~\/[^\s`"'<>]+|\.{1,2}\/[^\s`"'<>]+|[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)+)/g;

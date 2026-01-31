@@ -38,8 +38,8 @@ vi.mock("../../../services/tauri", () => ({
 
 const workspace: WorkspaceInfo = {
   id: "ws-1",
-  name: "CodexMonitor",
-  path: "/tmp/codex",
+  name: "GeminiMonitor",
+  path: "/tmp/gemini",
   connected: true,
   settings: { sidebarCollapsed: false },
 };

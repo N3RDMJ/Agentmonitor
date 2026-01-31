@@ -62,7 +62,7 @@ describe("useAppServerEvents", () => {
     expect(listener).toBeTypeOf("function");
 
     act(() => {
-      listener?.({ workspace_id: "ws-1", message: { method: "codex/connected" } });
+      listener?.({ workspace_id: "ws-1", message: { method: "gemini/connected" } });
     });
     expect(handlers.onWorkspaceConnected).toHaveBeenCalledWith("ws-1");
 
@@ -130,7 +130,7 @@ describe("useAppServerEvents", () => {
       listener?.({
         workspace_id: "ws-1",
         message: {
-          method: "codex/backgroundThread",
+          method: "gemini/backgroundThread",
           params: { threadId: "thread-2", action: "hide" },
         },
       });

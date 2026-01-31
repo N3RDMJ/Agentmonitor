@@ -8,8 +8,8 @@ type AppLayoutProps = {
   isTablet: boolean;
   showHome: boolean;
   showGitDetail: boolean;
-  activeTab: "projects" | "codex" | "git" | "log";
-  tabletTab: "codex" | "git" | "log";
+  activeTab: "projects" | "gemini" | "git" | "log";
+  tabletTab: "gemini" | "git" | "log";
   centerMode: "chat" | "diff";
   hasActivePlan: boolean;
   activeWorkspace: boolean;
@@ -30,7 +30,7 @@ type AppLayoutProps = {
   debugPanelNode: ReactNode;
   debugPanelFullNode: ReactNode;
   terminalDockNode: ReactNode;
-  compactEmptyCodexNode: ReactNode;
+  compactEmptyGeminiNode: ReactNode;
   compactEmptyGitNode: ReactNode;
   compactGitBackNode: ReactNode;
   onSidebarResizeStart: (event: MouseEvent<HTMLDivElement>) => void;
@@ -65,7 +65,7 @@ export const AppLayout = memo(function AppLayout({
   debugPanelNode,
   debugPanelFullNode,
   terminalDockNode,
-  compactEmptyCodexNode,
+  compactEmptyGeminiNode,
   compactEmptyGitNode,
   compactGitBackNode,
   onSidebarResizeStart,
@@ -83,7 +83,7 @@ export const AppLayout = memo(function AppLayout({
         activeTab={activeTab}
         activeWorkspace={activeWorkspace}
         showGitDetail={showGitDetail}
-        compactEmptyCodexNode={compactEmptyCodexNode}
+        compactEmptyGeminiNode={compactEmptyGeminiNode}
         compactEmptyGitNode={compactEmptyGitNode}
         compactGitBackNode={compactGitBackNode}
         topbarLeftNode={mainHeaderNode}

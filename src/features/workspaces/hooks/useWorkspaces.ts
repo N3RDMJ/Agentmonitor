@@ -20,7 +20,7 @@ import {
   removeWorktree as removeWorktreeService,
   renameWorktree as renameWorktreeService,
   renameWorktreeUpstream as renameWorktreeUpstreamService,
-  updateWorkspaceCodexBin as updateWorkspaceCodexBinService,
+  updateWorkspaceGeminiBin as updateWorkspaceGeminiBinService,
   updateWorkspaceSettings as updateWorkspaceSettingsService,
 } from "../../../services/tauri";
 
@@ -31,7 +31,7 @@ const SORT_ORDER_FALLBACK = Number.MAX_SAFE_INTEGER;
 
 type UseWorkspacesOptions = {
   onDebug?: (entry: DebugEntry) => void;
-  defaultCodexBin?: string | null;
+  defaultGeminiBin?: string | null;
   appSettings?: AppSettings;
   onUpdateAppSettings?: (next: AppSettings) => Promise<AppSettings>;
 };
@@ -82,7 +82,7 @@ export function useWorkspaces(options: UseWorkspacesOptions = {}) {
     () => new Set(),
   );
   const workspaceSettingsRef = useRef<Map<string, WorkspaceSettings>>(new Map());
-  const { onDebug, defaultCodexBin, appSettings, onUpdateAppSettings } = options;
+  const { onDebug, defaultGeminiBin, appSettings, onUpdateAppSettings } = options;
 
   const refreshWorkspaces = useCallback(async () => {
     try {
@@ -233,7 +233,7 @@ export function useWorkspaces(options: UseWorkspacesOptions = {}) {
         payload: { path: selection },
       });
       try {
-        const workspace = await addWorkspaceService(selection, defaultCodexBin ?? null);
+        const workspace = await addWorkspaceService(selection, defaultGeminiBin ?? null);
         setWorkspaces((prev) => [...prev, workspace]);
         setActiveWorkspaceId(workspace.id);
         Sentry.metrics.count("workspace_added", 1, {
@@ -254,7 +254,7 @@ export function useWorkspaces(options: UseWorkspacesOptions = {}) {
         throw error;
       }
     },
-    [defaultCodexBin, onDebug],
+    [defaultGeminiBin, onDebug],
   );
 
   const addWorkspace = useCallback(async () => {
@@ -450,24 +450,24 @@ export function useWorkspaces(options: UseWorkspacesOptions = {}) {
     [onDebug, workspaces],
   );
 
-  async function updateWorkspaceCodexBin(workspaceId: string, codexBin: string | null) {
+  async function updateWorkspaceGeminiBin(workspaceId: string, geminiBin: string | null) {
     onDebug?.({
-      id: `${Date.now()}-client-update-workspace-codex-bin`,
+      id: `${Date.now()}-client-update-workspace-gemini-bin`,
       timestamp: Date.now(),
       source: "client",
-      label: "workspace/codexBin",
-      payload: { workspaceId, codexBin },
+      label: "workspace/geminiBin",
+      payload: { workspaceId, geminiBin },
     });
     const previous = workspaces.find((entry) => entry.id === workspaceId) ?? null;
     if (previous) {
       setWorkspaces((prev) =>
         prev.map((entry) =>
-          entry.id === workspaceId ? { ...entry, codex_bin: codexBin } : entry,
+          entry.id === workspaceId ? { ...entry, gemini_bin: geminiBin } : entry,
         ),
       );
     }
     try {
-      const updated = await updateWorkspaceCodexBinService(workspaceId, codexBin);
+      const updated = await updateWorkspaceGeminiBinService(workspaceId, geminiBin);
       setWorkspaces((prev) =>
         prev.map((entry) => (entry.id === workspaceId ? updated : entry)),
       );
@@ -479,10 +479,10 @@ export function useWorkspaces(options: UseWorkspacesOptions = {}) {
         );
       }
       onDebug?.({
-        id: `${Date.now()}-client-update-workspace-codex-bin-error`,
+        id: `${Date.now()}-client-update-workspace-gemini-bin-error`,
         timestamp: Date.now(),
         source: "error",
-        label: "workspace/codexBin error",
+        label: "workspace/geminiBin error",
         payload: error instanceof Error ? error.message : String(error),
       });
       throw error;
@@ -662,7 +662,7 @@ export function useWorkspaces(options: UseWorkspacesOptions = {}) {
         : "";
 
     const confirmed = await ask(
-      `Are you sure you want to delete "${workspaceName}"?\n\nThis will remove the workspace from CodexMonitor.${detail}`,
+      `Are you sure you want to delete "${workspaceName}"?\n\nThis will remove the workspace from GeminiMonitor.${detail}`,
       {
         title: "Delete Workspace",
         kind: "warning",
@@ -710,7 +710,7 @@ export function useWorkspaces(options: UseWorkspacesOptions = {}) {
     const workspaceName = workspace?.name || "this worktree";
 
     const confirmed = await ask(
-      `Are you sure you want to delete "${workspaceName}"?\n\nThis will close the agent, remove its worktree, and delete it from CodexMonitor.`,
+      `Are you sure you want to delete "${workspaceName}"?\n\nThis will close the agent, remove its worktree, and delete it from GeminiMonitor.`,
       {
         title: "Delete Worktree",
         kind: "warning",
@@ -853,7 +853,7 @@ export function useWorkspaces(options: UseWorkspacesOptions = {}) {
     connectWorkspace,
     markWorkspaceConnected,
     updateWorkspaceSettings,
-    updateWorkspaceCodexBin,
+    updateWorkspaceGeminiBin,
     createWorkspaceGroup,
     renameWorkspaceGroup,
     moveWorkspaceGroup,

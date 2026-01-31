@@ -190,7 +190,7 @@ pub(crate) struct WorkspaceEntry {
     pub(crate) id: String,
     pub(crate) name: String,
     pub(crate) path: String,
-    pub(crate) codex_bin: Option<String>,
+    pub(crate) gemini_bin: Option<String>,
     #[serde(default)]
     pub(crate) kind: WorkspaceKind,
     #[serde(default, rename = "parentId")]
@@ -207,7 +207,7 @@ pub(crate) struct WorkspaceInfo {
     pub(crate) name: String,
     pub(crate) path: String,
     pub(crate) connected: bool,
-    pub(crate) codex_bin: Option<String>,
+    pub(crate) gemini_bin: Option<String>,
     #[serde(default)]
     pub(crate) kind: WorkspaceKind,
     #[serde(default, rename = "parentId")]
@@ -262,10 +262,10 @@ pub(crate) struct WorkspaceSettings {
     pub(crate) group_id: Option<String>,
     #[serde(default, rename = "gitRoot")]
     pub(crate) git_root: Option<String>,
-    #[serde(default, rename = "codexHome")]
-    pub(crate) codex_home: Option<String>,
-    #[serde(default, rename = "codexArgs")]
-    pub(crate) codex_args: Option<String>,
+    #[serde(default, rename = "geminiHome")]
+    pub(crate) gemini_home: Option<String>,
+    #[serde(default, rename = "geminiArgs")]
+    pub(crate) gemini_args: Option<String>,
     #[serde(default, rename = "launchScript")]
     pub(crate) launch_script: Option<String>,
     #[serde(default, rename = "worktreeSetupScript")]
@@ -294,10 +294,10 @@ pub(crate) struct OpenAppTarget {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub(crate) struct AppSettings {
-    #[serde(default, rename = "codexBin")]
-    pub(crate) codex_bin: Option<String>,
-    #[serde(default, rename = "codexArgs")]
-    pub(crate) codex_args: Option<String>,
+    #[serde(default, rename = "geminiBin")]
+    pub(crate) gemini_bin: Option<String>,
+    #[serde(default, rename = "geminiArgs")]
+    pub(crate) gemini_args: Option<String>,
     #[serde(default, rename = "backendMode")]
     pub(crate) backend_mode: BackendMode,
     #[serde(default = "default_remote_backend_host", rename = "remoteBackendHost")]
@@ -726,8 +726,8 @@ fn default_selected_open_app_id() -> String {
 impl Default for AppSettings {
     fn default() -> Self {
         Self {
-            codex_bin: None,
-            codex_args: None,
+            gemini_bin: None,
+            gemini_args: None,
             backend_mode: BackendMode::Local,
             remote_backend_host: default_remote_backend_host(),
             remote_backend_token: None,
@@ -792,7 +792,7 @@ mod tests {
     #[test]
     fn app_settings_defaults_from_empty_json() {
         let settings: AppSettings = serde_json::from_str("{}").expect("settings deserialize");
-        assert!(settings.codex_bin.is_none());
+        assert!(settings.gemini_bin.is_none());
         assert!(matches!(settings.backend_mode, BackendMode::Local));
         assert_eq!(settings.remote_backend_host, "127.0.0.1:4732");
         assert!(settings.remote_backend_token.is_none());
@@ -907,7 +907,7 @@ mod tests {
     #[test]
     fn workspace_entry_defaults_from_minimal_json() {
         let entry: WorkspaceEntry = serde_json::from_str(
-            r#"{"id":"1","name":"Test","path":"/tmp","codexBin":null}"#,
+            r#"{"id":"1","name":"Test","path":"/tmp","geminiBin":null}"#,
         )
         .expect("workspace deserialize");
         assert!(matches!(entry.kind, WorkspaceKind::Main));

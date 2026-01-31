@@ -81,7 +81,7 @@ export function useAppServerEvents(handlers: AppServerEventHandlers) {
       const { workspace_id, message } = payload;
       const method = String(message.method ?? "");
 
-      if (method === "codex/connected") {
+      if (method === "gemini/connected") {
         handlers.onWorkspaceConnected?.(workspace_id);
         return;
       }
@@ -179,7 +179,7 @@ export function useAppServerEvents(handlers: AppServerEventHandlers) {
         return;
       }
 
-      if (method === "codex/backgroundThread") {
+      if (method === "gemini/backgroundThread") {
         const params = message.params as Record<string, unknown>;
         const threadId = String(params.threadId ?? params.thread_id ?? "");
         const action = String(params.action ?? "hide");

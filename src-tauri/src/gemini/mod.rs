@@ -16,30 +16,30 @@ pub(crate) mod home;
 pub(crate) use crate::backend::app_server::WorkspaceSession;
 use crate::backend::events::AppServerEvent;
 use crate::backend::app_server::{
-    build_codex_command_with_bin, build_codex_path_env, check_codex_installation,
+    build_gemini_command_with_bin, build_gemini_path_env, check_gemini_installation,
     spawn_workspace_session as spawn_workspace_session_inner,
 };
 use crate::event_sink::TauriEventSink;
 use crate::remote_backend;
-use crate::shared::codex_core;
+use crate::shared::gemini_core;
 use crate::state::AppState;
 use crate::types::WorkspaceEntry;
-use self::args::apply_codex_args;
+use self::args::apply_gemini_args;
 
 pub(crate) async fn spawn_workspace_session(
     entry: WorkspaceEntry,
-    default_codex_bin: Option<String>,
-    codex_args: Option<String>,
+    default_gemini_bin: Option<String>,
+    gemini_args: Option<String>,
     app_handle: AppHandle,
-    codex_home: Option<PathBuf>,
+    gemini_home: Option<PathBuf>,
 ) -> Result<Arc<WorkspaceSession>, String> {
     let client_version = app_handle.package_info().version.to_string();
     let event_sink = TauriEventSink::new(app_handle);
     spawn_workspace_session_inner(
         entry,
-        default_codex_bin,
-        codex_args,
-        codex_home,
+        default_gemini_bin,
+        gemini_args,
+        gemini_home,
         client_version,
         event_sink,
     )
@@ -47,32 +47,32 @@ pub(crate) async fn spawn_workspace_session(
 }
 
 #[tauri::command]
-pub(crate) async fn codex_doctor(
-    codex_bin: Option<String>,
-    codex_args: Option<String>,
+pub(crate) async fn gemini_doctor(
+    gemini_bin: Option<String>,
+    gemini_args: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<Value, String> {
     let (default_bin, default_args) = {
         let settings = state.app_settings.lock().await;
-        (settings.codex_bin.clone(), settings.codex_args.clone())
+        (settings.gemini_bin.clone(), settings.gemini_args.clone())
     };
-    let resolved = codex_bin
+    let resolved = gemini_bin
         .clone()
         .filter(|value| !value.trim().is_empty())
         .or(default_bin);
-    let resolved_args = codex_args
+    let resolved_args = gemini_args
         .clone()
         .filter(|value| !value.trim().is_empty())
         .or(default_args);
-    let path_env = build_codex_path_env(resolved.as_deref());
-    let version = check_codex_installation(resolved.clone()).await?;
-    let mut command = build_codex_command_with_bin(resolved.clone());
-    apply_codex_args(&mut command, resolved_args.as_deref())?;
-    command.arg("app-server");
+    let path_env = build_gemini_path_env(resolved.as_deref());
+    let version = check_gemini_installation(resolved.clone()).await?;
+    let mut command = build_gemini_command_with_bin(resolved.clone());
+    apply_gemini_args(&mut command, resolved_args.as_deref())?;
+    command.arg("sandbox");
     command.arg("--help");
     command.stdout(std::process::Stdio::piped());
     command.stderr(std::process::Stdio::piped());
-    let app_server_ok = match timeout(Duration::from_secs(5), command.output()).await {
+    let sandbox_ok = match timeout(Duration::from_secs(5), command.output()).await {
         Ok(result) => result.map(|output| output.status.success()).unwrap_or(false),
         Err(_) => false,
     };
@@ -126,16 +126,16 @@ pub(crate) async fn codex_doctor(
             Err(_) => (false, None, Some("Timed out while checking Node.".to_string())),
         }
     };
-    let details = if app_server_ok {
+    let details = if sandbox_ok {
         None
     } else {
-        Some("Failed to run `codex app-server --help`.".to_string())
+        Some("Failed to run `gemini sandbox --help`.".to_string())
     };
     Ok(json!({
-        "ok": version.is_some() && app_server_ok,
-        "codexBin": resolved,
+        "ok": version.is_some() && sandbox_ok,
+        "geminiBin": resolved,
         "version": version,
-        "appServerOk": app_server_ok,
+        "sandboxOk": sandbox_ok,
         "details": details,
         "path": path_env,
         "nodeOk": node_ok,
@@ -160,7 +160,7 @@ pub(crate) async fn start_thread(
         .await;
     }
 
-    codex_core::start_thread_core(&state.sessions, workspace_id).await
+    gemini_core::start_thread_core(&state.sessions, workspace_id).await
 }
 
 #[tauri::command]
@@ -180,7 +180,7 @@ pub(crate) async fn resume_thread(
         .await;
     }
 
-    codex_core::resume_thread_core(&state.sessions, workspace_id, thread_id).await
+    gemini_core::resume_thread_core(&state.sessions, workspace_id, thread_id).await
 }
 
 #[tauri::command]
@@ -200,7 +200,7 @@ pub(crate) async fn fork_thread(
         .await;
     }
 
-    codex_core::fork_thread_core(&state.sessions, workspace_id, thread_id).await
+    gemini_core::fork_thread_core(&state.sessions, workspace_id, thread_id).await
 }
 
 #[tauri::command]
@@ -221,7 +221,7 @@ pub(crate) async fn list_threads(
         .await;
     }
 
-    codex_core::list_threads_core(&state.sessions, workspace_id, cursor, limit).await
+    gemini_core::list_threads_core(&state.sessions, workspace_id, cursor, limit).await
 }
 
 #[tauri::command]
@@ -242,7 +242,7 @@ pub(crate) async fn list_mcp_server_status(
         .await;
     }
 
-    codex_core::list_mcp_server_status_core(&state.sessions, workspace_id, cursor, limit).await
+    gemini_core::list_mcp_server_status_core(&state.sessions, workspace_id, cursor, limit).await
 }
 
 #[tauri::command]
@@ -262,7 +262,7 @@ pub(crate) async fn archive_thread(
         .await;
     }
 
-    codex_core::archive_thread_core(&state.sessions, workspace_id, thread_id).await
+    gemini_core::archive_thread_core(&state.sessions, workspace_id, thread_id).await
 }
 
 #[tauri::command]
@@ -307,7 +307,7 @@ pub(crate) async fn send_user_message(
         .await;
     }
 
-    codex_core::send_user_message_core(
+    gemini_core::send_user_message_core(
         &state.sessions,
         workspace_id,
         thread_id,
@@ -337,7 +337,7 @@ pub(crate) async fn collaboration_mode_list(
         .await;
     }
 
-    codex_core::collaboration_mode_list_core(&state.sessions, workspace_id).await
+    gemini_core::collaboration_mode_list_core(&state.sessions, workspace_id).await
 }
 
 #[tauri::command]
@@ -358,7 +358,7 @@ pub(crate) async fn turn_interrupt(
         .await;
     }
 
-    codex_core::turn_interrupt_core(&state.sessions, workspace_id, thread_id, turn_id).await
+    gemini_core::turn_interrupt_core(&state.sessions, workspace_id, thread_id, turn_id).await
 }
 
 #[tauri::command]
@@ -385,7 +385,7 @@ pub(crate) async fn start_review(
         .await;
     }
 
-    codex_core::start_review_core(&state.sessions, workspace_id, thread_id, target, delivery).await
+    gemini_core::start_review_core(&state.sessions, workspace_id, thread_id, target, delivery).await
 }
 
 #[tauri::command]
@@ -404,7 +404,7 @@ pub(crate) async fn model_list(
         .await;
     }
 
-    codex_core::model_list_core(&state.sessions, workspace_id).await
+    gemini_core::model_list_core(&state.sessions, workspace_id).await
 }
 
 #[tauri::command]
@@ -423,7 +423,7 @@ pub(crate) async fn account_rate_limits(
         .await;
     }
 
-    codex_core::account_rate_limits_core(&state.sessions, workspace_id).await
+    gemini_core::account_rate_limits_core(&state.sessions, workspace_id).await
 }
 
 #[tauri::command]
@@ -442,11 +442,11 @@ pub(crate) async fn account_read(
         .await;
     }
 
-    codex_core::account_read_core(&state.sessions, &state.workspaces, workspace_id).await
+    gemini_core::account_read_core(&state.sessions, &state.workspaces, workspace_id).await
 }
 
 #[tauri::command]
-pub(crate) async fn codex_login(
+pub(crate) async fn gemini_login(
     workspace_id: String,
     state: State<'_, AppState>,
     app: AppHandle,
@@ -455,23 +455,23 @@ pub(crate) async fn codex_login(
         return remote_backend::call_remote(
             &*state,
             app,
-            "codex_login",
+            "gemini_login",
             json!({ "workspaceId": workspace_id }),
         )
         .await;
     }
 
-    codex_core::codex_login_core(
+    gemini_core::gemini_login_core(
         &state.workspaces,
         &state.app_settings,
-        &state.codex_login_cancels,
+        &state.gemini_login_cancels,
         workspace_id,
     )
     .await
 }
 
 #[tauri::command]
-pub(crate) async fn codex_login_cancel(
+pub(crate) async fn gemini_login_cancel(
     workspace_id: String,
     state: State<'_, AppState>,
     app: AppHandle,
@@ -480,13 +480,13 @@ pub(crate) async fn codex_login_cancel(
         return remote_backend::call_remote(
             &*state,
             app,
-            "codex_login_cancel",
+            "gemini_login_cancel",
             json!({ "workspaceId": workspace_id }),
         )
         .await;
     }
 
-    codex_core::codex_login_cancel_core(&state.codex_login_cancels, workspace_id).await
+    gemini_core::gemini_login_cancel_core(&state.gemini_login_cancels, workspace_id).await
 }
 
 #[tauri::command]
@@ -505,7 +505,7 @@ pub(crate) async fn skills_list(
         .await;
     }
 
-    codex_core::skills_list_core(&state.sessions, workspace_id).await
+    gemini_core::skills_list_core(&state.sessions, workspace_id).await
 }
 
 #[tauri::command]
@@ -527,7 +527,7 @@ pub(crate) async fn respond_to_server_request(
         return Ok(());
     }
 
-    codex_core::respond_to_server_request_core(&state.sessions, workspace_id, request_id, result)
+    gemini_core::respond_to_server_request_core(&state.sessions, workspace_id, request_id, result)
         .await
 }
 
@@ -561,7 +561,7 @@ pub(crate) async fn remember_approval_rule(
     command: Vec<String>,
     state: State<'_, AppState>,
 ) -> Result<Value, String> {
-    codex_core::remember_approval_rule_core(&state.workspaces, workspace_id, command).await
+    gemini_core::remember_approval_rule_core(&state.workspaces, workspace_id, command).await
 }
 
 #[tauri::command]
@@ -580,7 +580,7 @@ pub(crate) async fn get_config_model(
         .await;
     }
 
-    codex_core::get_config_model_core(&state.workspaces, workspace_id).await
+    gemini_core::get_config_model_core(&state.workspaces, workspace_id).await
 }
 
 /// Generates a commit message in the background without showing in the main chat
@@ -647,7 +647,7 @@ Changes:\n{diff}"
         AppServerEvent {
             workspace_id: workspace_id.clone(),
             message: json!({
-                "method": "codex/backgroundThread",
+                "method": "gemini/backgroundThread",
                 "params": {
                     "threadId": thread_id,
                     "action": "hide"
@@ -845,7 +845,7 @@ Task:\n{cleaned_prompt}"
         AppServerEvent {
             workspace_id: workspace_id.clone(),
             message: json!({
-                "method": "codex/backgroundThread",
+                "method": "gemini/backgroundThread",
                 "params": {
                     "threadId": thread_id,
                     "action": "hide"

@@ -21,9 +21,9 @@ export function useGitPanelController({
   gitDiffPreloadEnabled: boolean;
   isCompact: boolean;
   isTablet: boolean;
-  activeTab: "projects" | "codex" | "git" | "log";
-  tabletTab: "codex" | "git" | "log";
-  setActiveTab: (tab: "projects" | "codex" | "git" | "log") => void;
+  activeTab: "projects" | "gemini" | "git" | "log";
+  tabletTab: "gemini" | "git" | "log";
+  setActiveTab: (tab: "projects" | "gemini" | "git" | "log") => void;
   prDiffs: GitHubPullRequestDiff[];
   prDiffsLoading: boolean;
   prDiffsError: string | null;

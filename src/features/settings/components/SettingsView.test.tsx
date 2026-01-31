@@ -18,8 +18,8 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
 }));
 
 const baseSettings: AppSettings = {
-  codexBin: null,
-  codexArgs: null,
+  geminiBin: null,
+  geminiArgs: null,
   backendMode: "local",
   remoteBackendHost: "127.0.0.1:4732",
   remoteBackendToken: null,
@@ -86,7 +86,7 @@ const baseSettings: AppSettings = {
 
 const createDoctorResult = () => ({
   ok: true,
-  codexBin: null,
+  geminiBin: null,
   version: null,
   appServerOk: true,
   details: null,
@@ -126,7 +126,7 @@ const renderDisplaySection = (
     onDeleteWorkspaceGroup: vi.fn().mockResolvedValue(null),
     onAssignWorkspaceGroup: vi.fn().mockResolvedValue(null),
     onRunDoctor: vi.fn().mockResolvedValue(createDoctorResult()),
-    onUpdateWorkspaceCodexBin: vi.fn().mockResolvedValue(undefined),
+    onUpdateWorkspaceGeminiBin: vi.fn().mockResolvedValue(undefined),
     onUpdateWorkspaceSettings: vi.fn().mockResolvedValue(undefined),
     scaleShortcutTitle: "Scale shortcut",
     scaleShortcutText: "Use Command +/-",
@@ -163,7 +163,7 @@ describe("SettingsView Display", () => {
     renderDisplaySection({ onUpdateAppSettings });
 
     const row = screen
-      .getByText("Show remaining Codex limits")
+      .getByText("Show remaining Gemini limits")
       .closest(".settings-toggle-row") as HTMLElement | null;
     if (!row) {
       throw new Error("Expected remaining limits row");
@@ -315,19 +315,19 @@ describe("SettingsView Display", () => {
   });
 });
 
-describe("SettingsView Codex overrides", () => {
-  it("updates workspace Codex args override on blur", async () => {
+describe("SettingsView Gemini overrides", () => {
+  it("updates workspace Gemini args override on blur", async () => {
     const onUpdateWorkspaceSettings = vi.fn().mockResolvedValue(undefined);
     const workspace: WorkspaceInfo = {
       id: "w1",
       name: "Workspace",
       path: "/tmp/workspace",
       connected: false,
-      codex_bin: null,
+      gemini_bin: null,
       kind: "main",
       parentId: null,
       worktree: null,
-      settings: { sidebarCollapsed: false, codexArgs: null },
+      settings: { sidebarCollapsed: false, geminiArgs: null },
     };
 
     render(
@@ -351,7 +351,7 @@ describe("SettingsView Codex overrides", () => {
         openAppIconById={{}}
         onUpdateAppSettings={vi.fn().mockResolvedValue(undefined)}
         onRunDoctor={vi.fn().mockResolvedValue(createDoctorResult())}
-        onUpdateWorkspaceCodexBin={vi.fn().mockResolvedValue(undefined)}
+        onUpdateWorkspaceGeminiBin={vi.fn().mockResolvedValue(undefined)}
         onUpdateWorkspaceSettings={onUpdateWorkspaceSettings}
         scaleShortcutTitle="Scale shortcut"
         scaleShortcutText="Use Command +/-"
@@ -360,17 +360,17 @@ describe("SettingsView Codex overrides", () => {
         onDownloadDictationModel={vi.fn()}
         onCancelDictationDownload={vi.fn()}
         onRemoveDictationModel={vi.fn()}
-        initialSection="codex"
+        initialSection="gemini"
       />,
     );
 
-    const input = screen.getByLabelText("Codex args override for Workspace");
+    const input = screen.getByLabelText("Gemini args override for Workspace");
     fireEvent.change(input, { target: { value: "--profile dev" } });
     fireEvent.blur(input);
 
     await waitFor(() => {
       expect(onUpdateWorkspaceSettings).toHaveBeenCalledWith("w1", {
-        codexArgs: "--profile dev",
+        geminiArgs: "--profile dev",
       });
     });
   });
@@ -398,7 +398,7 @@ describe("SettingsView Shortcuts", () => {
         openAppIconById={{}}
         onUpdateAppSettings={vi.fn().mockResolvedValue(undefined)}
         onRunDoctor={vi.fn().mockResolvedValue(createDoctorResult())}
-        onUpdateWorkspaceCodexBin={vi.fn().mockResolvedValue(undefined)}
+        onUpdateWorkspaceGeminiBin={vi.fn().mockResolvedValue(undefined)}
         onUpdateWorkspaceSettings={vi.fn().mockResolvedValue(undefined)}
         scaleShortcutTitle="Scale shortcut"
         scaleShortcutText="Use Command +/-"
@@ -438,7 +438,7 @@ describe("SettingsView Shortcuts", () => {
         openAppIconById={{}}
         onUpdateAppSettings={vi.fn().mockResolvedValue(undefined)}
         onRunDoctor={vi.fn().mockResolvedValue(createDoctorResult())}
-        onUpdateWorkspaceCodexBin={vi.fn().mockResolvedValue(undefined)}
+        onUpdateWorkspaceGeminiBin={vi.fn().mockResolvedValue(undefined)}
         onUpdateWorkspaceSettings={vi.fn().mockResolvedValue(undefined)}
         scaleShortcutTitle="Scale shortcut"
         scaleShortcutText="Use Command +/-"

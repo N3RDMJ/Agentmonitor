@@ -3,47 +3,47 @@ use std::path::PathBuf;
 
 use crate::types::WorkspaceEntry;
 
-pub(crate) fn resolve_workspace_codex_home(
+pub(crate) fn resolve_workspace_gemini_home(
     entry: &WorkspaceEntry,
     parent_entry: Option<&WorkspaceEntry>,
 ) -> Option<PathBuf> {
-    if let Some(value) = entry.settings.codex_home.as_ref() {
+    if let Some(value) = entry.settings.gemini_home.as_ref() {
         let base = PathBuf::from(&entry.path);
-        if let Some(path) = normalize_codex_home_with_base(value, &base) {
+        if let Some(path) = normalize_gemini_home_with_base(value, &base) {
             return Some(path);
         }
     }
     if entry.kind.is_worktree() {
         if let Some(parent) = parent_entry {
-            if let Some(value) = parent.settings.codex_home.as_ref() {
+            if let Some(value) = parent.settings.gemini_home.as_ref() {
                 let base = PathBuf::from(&parent.path);
-                if let Some(path) = normalize_codex_home_with_base(value, &base) {
+                if let Some(path) = normalize_gemini_home_with_base(value, &base) {
                     return Some(path);
                 }
             }
-            let legacy_home = PathBuf::from(&parent.path).join(".codexmonitor");
+            let legacy_home = PathBuf::from(&parent.path).join(".geminimonitor");
             if legacy_home.is_dir() {
                 return Some(legacy_home);
             }
         }
     }
-    let legacy_home = PathBuf::from(&entry.path).join(".codexmonitor");
+    let legacy_home = PathBuf::from(&entry.path).join(".geminimonitor");
     if legacy_home.is_dir() {
         return Some(legacy_home);
     }
-    resolve_default_codex_home()
+    resolve_default_gemini_home()
 }
 
-pub(crate) fn resolve_default_codex_home() -> Option<PathBuf> {
-    if let Ok(value) = env::var("CODEX_HOME") {
-        if let Some(path) = normalize_codex_home(&value) {
+pub(crate) fn resolve_default_gemini_home() -> Option<PathBuf> {
+    if let Ok(value) = env::var("GEMINI_HOME") {
+        if let Some(path) = normalize_gemini_home(&value) {
             return Some(path);
         }
     }
-    resolve_home_dir().map(|home| home.join(".codex"))
+    resolve_home_dir().map(|home| home.join(".gemini"))
 }
 
-fn normalize_codex_home(value: &str) -> Option<PathBuf> {
+fn normalize_gemini_home(value: &str) -> Option<PathBuf> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
         return None;
@@ -61,8 +61,8 @@ fn normalize_codex_home(value: &str) -> Option<PathBuf> {
     Some(PathBuf::from(trimmed))
 }
 
-fn normalize_codex_home_with_base(value: &str, base: &PathBuf) -> Option<PathBuf> {
-    let path = normalize_codex_home(value)?;
+fn normalize_gemini_home_with_base(value: &str, base: &PathBuf) -> Option<PathBuf> {
+    let path = normalize_gemini_home(value)?;
     if path.is_absolute() {
         Some(path)
     } else {
@@ -195,7 +195,7 @@ mod tests {
     fn workspace_entry(
         kind: WorkspaceKind,
         path: &str,
-        codex_home: Option<&str>,
+        gemini_home: Option<&str>,
     ) -> WorkspaceEntry {
         let worktree = if kind.is_worktree() {
             Some(WorktreeInfo {
@@ -208,50 +208,50 @@ mod tests {
             id: "workspace-id".to_string(),
             name: "workspace".to_string(),
             path: path.to_string(),
-            codex_bin: None,
+            gemini_bin: None,
             kind,
             parent_id: None,
             worktree,
             settings: WorkspaceSettings {
-                codex_home: codex_home.map(|value| value.to_string()),
+                gemini_home: gemini_home.map(|value| value.to_string()),
                 ..WorkspaceSettings::default()
             },
         }
     }
 
     #[test]
-    fn worktree_inherits_parent_codex_home_override() {
-        let parent = workspace_entry(WorkspaceKind::Main, "/repo", Some("/tmp/codex-parent"));
+    fn worktree_inherits_parent_gemini_home_override() {
+        let parent = workspace_entry(WorkspaceKind::Main, "/repo", Some("/tmp/gemini-parent"));
         let child = workspace_entry(WorkspaceKind::Worktree, "/repo/worktree", None);
 
-        let resolved = resolve_workspace_codex_home(&child, Some(&parent));
+        let resolved = resolve_workspace_gemini_home(&child, Some(&parent));
 
-        assert_eq!(resolved, Some(PathBuf::from("/tmp/codex-parent")));
+        assert_eq!(resolved, Some(PathBuf::from("/tmp/gemini-parent")));
     }
 
     #[test]
-    fn workspace_codex_home_relative_resolves_against_workspace_path() {
-        let entry = workspace_entry(WorkspaceKind::Main, "/repo", Some(".codex"));
+    fn workspace_gemini_home_relative_resolves_against_workspace_path() {
+        let entry = workspace_entry(WorkspaceKind::Main, "/repo", Some(".gemini"));
 
-        let resolved = resolve_workspace_codex_home(&entry, None);
+        let resolved = resolve_workspace_gemini_home(&entry, None);
 
-        assert_eq!(resolved, Some(PathBuf::from("/repo/.codex")));
+        assert_eq!(resolved, Some(PathBuf::from("/repo/.gemini")));
     }
 
     #[test]
     fn worktree_relative_override_uses_parent_path() {
-        let parent = workspace_entry(WorkspaceKind::Main, "/repo", Some(".codex"));
+        let parent = workspace_entry(WorkspaceKind::Main, "/repo", Some(".gemini"));
         let child = workspace_entry(WorkspaceKind::Worktree, "/repo/worktree", None);
 
-        let resolved = resolve_workspace_codex_home(&child, Some(&parent));
+        let resolved = resolve_workspace_gemini_home(&child, Some(&parent));
 
-        assert_eq!(resolved, Some(PathBuf::from("/repo/.codex")));
+        assert_eq!(resolved, Some(PathBuf::from("/repo/.gemini")));
     }
 
     #[test]
-    fn codex_home_expands_tilde_and_env_vars() {
+    fn gemini_home_expands_tilde_and_env_vars() {
         let _guard = ENV_LOCK.lock().expect("lock env");
-        let home_dir = std::env::temp_dir().join("codex-home-test");
+        let home_dir = std::env::temp_dir().join("gemini-home-test");
         let home_str = home_dir.to_string_lossy().to_string();
 
         let prev_home = std::env::var("HOME").ok();
@@ -260,20 +260,20 @@ mod tests {
         let prev_appdata = std::env::var("APPDATA").ok();
         std::env::set_var("APPDATA", "/tmp/appdata-root");
 
-        let tilde = normalize_codex_home("~/.codex-api");
-        assert_eq!(tilde, Some(home_dir.join(".codex-api")));
+        let tilde = normalize_gemini_home("~/.gemini-api");
+        assert_eq!(tilde, Some(home_dir.join(".gemini-api")));
 
-        let dollar = normalize_codex_home("$HOME/.codex-api");
-        assert_eq!(dollar, Some(home_dir.join(".codex-api")));
+        let dollar = normalize_gemini_home("$HOME/.gemini-api");
+        assert_eq!(dollar, Some(home_dir.join(".gemini-api")));
 
-        let braces = normalize_codex_home("${HOME}/.codex-api");
-        assert_eq!(braces, Some(home_dir.join(".codex-api")));
+        let braces = normalize_gemini_home("${HOME}/.gemini-api");
+        assert_eq!(braces, Some(home_dir.join(".gemini-api")));
 
-        let appdata = normalize_codex_home("%APPDATA%/Codex");
-        assert_eq!(appdata, Some(PathBuf::from("/tmp/appdata-root/Codex")));
+        let appdata = normalize_gemini_home("%APPDATA%/Gemini");
+        assert_eq!(appdata, Some(PathBuf::from("/tmp/appdata-root/Gemini")));
 
-        let appdata_lower = normalize_codex_home("$appdata/Codex");
-        assert_eq!(appdata_lower, Some(PathBuf::from("/tmp/appdata-root/Codex")));
+        let appdata_lower = normalize_gemini_home("$appdata/Gemini");
+        assert_eq!(appdata_lower, Some(PathBuf::from("/tmp/appdata-root/Gemini")));
 
         match prev_home {
             Some(value) => std::env::set_var("HOME", value),

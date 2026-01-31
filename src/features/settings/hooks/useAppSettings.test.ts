@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AppSettings, CodexDoctorResult } from "../../../types";
+import type { AppSettings, GeminiDoctorResult } from "../../../types";
 import { useAppSettings } from "./useAppSettings";
 import {
   getAppSettings,
-  runCodexDoctor,
+  runGeminiDoctor,
   updateAppSettings,
 } from "../../../services/tauri";
 import { UI_SCALE_DEFAULT, UI_SCALE_MAX } from "../../../utils/uiScale";
@@ -13,12 +13,12 @@ import { UI_SCALE_DEFAULT, UI_SCALE_MAX } from "../../../utils/uiScale";
 vi.mock("../../../services/tauri", () => ({
   getAppSettings: vi.fn(),
   updateAppSettings: vi.fn(),
-  runCodexDoctor: vi.fn(),
+  runGeminiDoctor: vi.fn(),
 }));
 
 const getAppSettingsMock = vi.mocked(getAppSettings);
 const updateAppSettingsMock = vi.mocked(updateAppSettings);
-const runCodexDoctorMock = vi.mocked(runCodexDoctor);
+const runGeminiDoctorMock = vi.mocked(runGeminiDoctor);
 
 describe("useAppSettings", () => {
   beforeEach(() => {
@@ -79,7 +79,7 @@ describe("useAppSettings", () => {
 
     const next: AppSettings = {
       ...result.current.settings,
-      codexArgs: "--profile dev",
+      geminiArgs: "--profile dev",
       theme: "nope" as unknown as AppSettings["theme"],
       uiScale: 0.04,
       uiFontFamily: "",
@@ -89,7 +89,7 @@ describe("useAppSettings", () => {
     };
     const saved: AppSettings = {
       ...result.current.settings,
-      codexArgs: "--profile dev",
+      geminiArgs: "--profile dev",
       theme: "dark",
       uiScale: 2.4,
       uiFontFamily: "Avenir, sans-serif",
@@ -121,25 +121,25 @@ describe("useAppSettings", () => {
 
   it("surfaces doctor errors", async () => {
     getAppSettingsMock.mockResolvedValue({} as AppSettings);
-    runCodexDoctorMock.mockRejectedValue(new Error("doctor fail"));
+    runGeminiDoctorMock.mockRejectedValue(new Error("doctor fail"));
     const { result } = renderHook(() => useAppSettings());
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    await expect(result.current.doctor("/bin/codex", "--profile test")).rejects.toThrow(
+    await expect(result.current.doctor("/bin/gemini", "--profile test")).rejects.toThrow(
       "doctor fail",
     );
-    expect(runCodexDoctorMock).toHaveBeenCalledWith(
-      "/bin/codex",
+    expect(runGeminiDoctorMock).toHaveBeenCalledWith(
+      "/bin/gemini",
       "--profile test",
     );
   });
 
   it("returns doctor results", async () => {
     getAppSettingsMock.mockResolvedValue({} as AppSettings);
-    const response: CodexDoctorResult = {
+    const response: GeminiDoctorResult = {
       ok: true,
-      codexBin: "/bin/codex",
+      geminiBin: "/bin/gemini",
       version: "1.0.0",
       appServerOk: true,
       details: null,
@@ -148,12 +148,12 @@ describe("useAppSettings", () => {
       nodeVersion: "20.0.0",
       nodeDetails: null,
     };
-    runCodexDoctorMock.mockResolvedValue(response);
+    runGeminiDoctorMock.mockResolvedValue(response);
     const { result } = renderHook(() => useAppSettings());
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    await expect(result.current.doctor("/bin/codex", null)).resolves.toEqual(
+    await expect(result.current.doctor("/bin/gemini", null)).resolves.toEqual(
       response,
     );
   });

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { AppSettings } from "../../../types";
-import { getAppSettings, runCodexDoctor, updateAppSettings } from "../../../services/tauri";
+import { getAppSettings, runGeminiDoctor, updateAppSettings } from "../../../services/tauri";
 import { clampUiScale, UI_SCALE_DEFAULT } from "../../../utils/uiScale";
 import {
   DEFAULT_CODE_FONT_FAMILY,
@@ -20,8 +20,8 @@ import { getDefaultInterruptShortcut } from "../../../utils/shortcuts";
 const allowedThemes = new Set(["system", "light", "dark", "dim"]);
 
 const defaultSettings: AppSettings = {
-  codexBin: null,
-  codexArgs: null,
+  geminiBin: null,
+  geminiArgs: null,
   backendMode: "local",
   remoteBackendHost: "127.0.0.1:4732",
   remoteBackendToken: null,
@@ -98,8 +98,8 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
       : normalizedTargets[0]?.id ?? DEFAULT_OPEN_APP_ID;
   return {
     ...settings,
-    codexBin: settings.codexBin?.trim() ? settings.codexBin.trim() : null,
-    codexArgs: settings.codexArgs?.trim() ? settings.codexArgs.trim() : null,
+    geminiBin: settings.geminiBin?.trim() ? settings.geminiBin.trim() : null,
+    geminiArgs: settings.geminiArgs?.trim() ? settings.geminiArgs.trim() : null,
     uiScale: clampUiScale(settings.uiScale),
     theme: allowedThemes.has(settings.theme) ? settings.theme : "system",
     uiFontFamily: normalizeFontFamily(
@@ -159,8 +159,8 @@ export function useAppSettings() {
   }, []);
 
   const doctor = useCallback(
-    async (codexBin: string | null, codexArgs: string | null) => {
-      return runCodexDoctor(codexBin, codexArgs);
+    async (geminiBin: string | null, geminiArgs: string | null) => {
+      return runGeminiDoctor(geminiBin, geminiArgs);
     },
     [],
   );
