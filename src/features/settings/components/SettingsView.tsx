@@ -2847,21 +2847,163 @@ export function SettingsView({
                 {appSettings.cliType === "cursor" && (
                   <>
                     <div className="settings-field">
-                      <div className="settings-field-label">Cursor Configuration</div>
+                      <label className="settings-field-label" htmlFor="cursor-mode">
+                        Default operating mode
+                      </label>
+                      <select
+                        id="cursor-mode"
+                        className="settings-select"
+                        value={appSettings.cursorDefaultMode}
+                        onChange={(event) =>
+                          void onUpdateAppSettings({
+                            ...appSettings,
+                            cursorDefaultMode: event.target.value as AppSettings["cursorDefaultMode"],
+                          })
+                        }
+                      >
+                        <option value="agent">Agent (full access)</option>
+                        <option value="plan">Plan (design before coding)</option>
+                        <option value="ask">Ask (read-only exploration)</option>
+                      </select>
                       <div className="settings-help">
-                        Cursor CLI uses its own authentication and settings system.
-                        Configure Cursor settings directly in the Cursor application.
+                        Agent mode has full tool access. Plan mode helps design before coding. Ask mode is read-only.
                       </div>
                     </div>
 
                     <div className="settings-field">
-                      <div className="settings-field-label">Cursor Features</div>
+                      <label className="settings-field-label" htmlFor="cursor-output">
+                        Output format
+                      </label>
+                      <select
+                        id="cursor-output"
+                        className="settings-select"
+                        value={appSettings.cursorOutputFormat}
+                        onChange={(event) =>
+                          void onUpdateAppSettings({
+                            ...appSettings,
+                            cursorOutputFormat: event.target.value as AppSettings["cursorOutputFormat"],
+                          })
+                        }
+                      >
+                        <option value="text">Text (default)</option>
+                        <option value="json">JSON</option>
+                        <option value="stream-json">Stream JSON</option>
+                      </select>
                       <div className="settings-help">
-                        <ul style={{ margin: "8px 0", paddingLeft: "20px" }}>
-                          <li>Authentication is handled through your Cursor account</li>
-                          <li>Settings are managed in Cursor&apos;s preferences</li>
-                          <li>AI features use Cursor&apos;s built-in models</li>
-                        </ul>
+                        Response format for CLI output. Use JSON or Stream JSON for scripts.
+                      </div>
+                    </div>
+
+                    <div className="settings-field">
+                      <div className="settings-field-label">Editor Settings</div>
+
+                      <div className="settings-toggle-row">
+                        <div>
+                          <div className="settings-toggle-title">Vim mode</div>
+                          <div className="settings-toggle-subtitle">
+                            Enable Vim keybindings in Cursor CLI.
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className={`settings-toggle ${appSettings.cursorVimMode ? "on" : ""}`}
+                          onClick={() =>
+                            void onUpdateAppSettings({
+                              ...appSettings,
+                              cursorVimMode: !appSettings.cursorVimMode,
+                            })
+                          }
+                          aria-pressed={appSettings.cursorVimMode}
+                        >
+                          <span className="settings-toggle-knob" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="settings-field">
+                      <div className="settings-field-label">Attribution Settings</div>
+
+                      <div className="settings-toggle-row">
+                        <div>
+                          <div className="settings-toggle-title">Attribute commits to agent</div>
+                          <div className="settings-toggle-subtitle">
+                            Add agent trailers to git commits.
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className={`settings-toggle ${appSettings.cursorAttributeCommits ? "on" : ""}`}
+                          onClick={() =>
+                            void onUpdateAppSettings({
+                              ...appSettings,
+                              cursorAttributeCommits: !appSettings.cursorAttributeCommits,
+                            })
+                          }
+                          aria-pressed={appSettings.cursorAttributeCommits}
+                        >
+                          <span className="settings-toggle-knob" />
+                        </button>
+                      </div>
+
+                      <div className="settings-toggle-row">
+                        <div>
+                          <div className="settings-toggle-title">Attribute PRs to agent</div>
+                          <div className="settings-toggle-subtitle">
+                            Add attribution footer to pull requests.
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className={`settings-toggle ${appSettings.cursorAttributePRs ? "on" : ""}`}
+                          onClick={() =>
+                            void onUpdateAppSettings({
+                              ...appSettings,
+                              cursorAttributePRs: !appSettings.cursorAttributePRs,
+                            })
+                          }
+                          aria-pressed={appSettings.cursorAttributePRs}
+                        >
+                          <span className="settings-toggle-knob" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="settings-field">
+                      <div className="settings-field-label">Network Settings</div>
+
+                      <div className="settings-toggle-row">
+                        <div>
+                          <div className="settings-toggle-title">Use HTTP/1.1 for agent</div>
+                          <div className="settings-toggle-subtitle">
+                            Enable for compatibility with enterprise proxies.
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className={`settings-toggle ${appSettings.cursorUseHttp1 ? "on" : ""}`}
+                          onClick={() =>
+                            void onUpdateAppSettings({
+                              ...appSettings,
+                              cursorUseHttp1: !appSettings.cursorUseHttp1,
+                            })
+                          }
+                          aria-pressed={appSettings.cursorUseHttp1}
+                        >
+                          <span className="settings-toggle-knob" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="settings-field">
+                      <div className="settings-field-label">Beta Features</div>
+                      <div className="settings-help">
+                        Access beta features in Cursor Settings → Beta or use the keyboard shortcut:
+                        <br />
+                        <code>Cmd+Shift+J</code> (macOS) or <code>Ctrl+Shift+J</code> (Windows/Linux)
+                      </div>
+                      <div className="settings-help" style={{ marginTop: "8px" }}>
+                        Available beta features include: Long Context Chat, Interpreter Mode,
+                        Bugbot Autofix, Debug Mode, and Plan Mode Mermaid Diagrams.
                       </div>
                     </div>
                   </>

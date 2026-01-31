@@ -25,6 +25,13 @@ const defaultSettings: AppSettings = {
   geminiArgs: null,
   cursorBin: null,
   cursorArgs: null,
+  // Cursor CLI defaults
+  cursorVimMode: false,
+  cursorDefaultMode: "agent",
+  cursorOutputFormat: "text",
+  cursorAttributeCommits: true,
+  cursorAttributePRs: true,
+  cursorUseHttp1: false,
   backendMode: "local",
   remoteBackendHost: "127.0.0.1:4732",
   remoteBackendToken: null,
@@ -99,6 +106,8 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     : hasStoredSelection
       ? storedOpenAppId
       : normalizedTargets[0]?.id ?? DEFAULT_OPEN_APP_ID;
+  const allowedCursorModes = new Set(["agent", "plan", "ask"]);
+  const allowedCursorFormats = new Set(["text", "json", "stream-json"]);
   return {
     ...settings,
     cliType: settings.cliType === "cursor" ? "cursor" : "gemini",
@@ -106,6 +115,16 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     geminiArgs: settings.geminiArgs?.trim() ? settings.geminiArgs.trim() : null,
     cursorBin: settings.cursorBin?.trim() ? settings.cursorBin.trim() : null,
     cursorArgs: settings.cursorArgs?.trim() ? settings.cursorArgs.trim() : null,
+    cursorVimMode: Boolean(settings.cursorVimMode),
+    cursorDefaultMode: allowedCursorModes.has(settings.cursorDefaultMode)
+      ? settings.cursorDefaultMode
+      : "agent",
+    cursorOutputFormat: allowedCursorFormats.has(settings.cursorOutputFormat)
+      ? settings.cursorOutputFormat
+      : "text",
+    cursorAttributeCommits: settings.cursorAttributeCommits !== false,
+    cursorAttributePRs: settings.cursorAttributePRs !== false,
+    cursorUseHttp1: Boolean(settings.cursorUseHttp1),
     uiScale: clampUiScale(settings.uiScale),
     theme: allowedThemes.has(settings.theme) ? settings.theme : "system",
     uiFontFamily: normalizeFontFamily(
