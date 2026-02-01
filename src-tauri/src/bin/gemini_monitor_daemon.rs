@@ -7,6 +7,8 @@ mod gemini_args;
 mod gemini_home;
 #[path = "../gemini/config.rs"]
 mod gemini_config;
+#[path = "../gemini/settings.rs"]
+mod gemini_settings;
 #[path = "../files/io.rs"]
 mod file_io;
 #[path = "../files/ops.rs"]
@@ -37,6 +39,37 @@ mod gemini {
     }
     pub(crate) mod home {
         pub(crate) use crate::gemini_home::*;
+    }
+    pub(crate) mod settings {
+        pub(crate) use crate::gemini_settings::*;
+    }
+
+    use std::path::PathBuf;
+    use crate::backend::app_server::{CliSpawnConfig, CursorCliSettings};
+    use crate::types::AppSettings;
+
+    /// Build CliSpawnConfig from AppSettings
+    pub(crate) fn build_cli_spawn_config(
+        settings: &AppSettings,
+        gemini_args: Option<String>,
+        gemini_home: Option<PathBuf>,
+    ) -> CliSpawnConfig {
+        CliSpawnConfig {
+            cli_type: settings.cli_type.clone(),
+            gemini_bin: settings.gemini_bin.clone(),
+            gemini_args,
+            gemini_home,
+            cursor_bin: settings.cursor_bin.clone(),
+            cursor_args: settings.cursor_args.clone(),
+            cursor_settings: CursorCliSettings {
+                vim_mode: settings.cursor_vim_mode,
+                default_mode: settings.cursor_default_mode.clone(),
+                output_format: settings.cursor_output_format.clone(),
+                attribute_commits: settings.cursor_attribute_commits,
+                attribute_prs: settings.cursor_attribute_prs,
+                use_http1: settings.cursor_use_http1,
+            },
+        }
     }
 }
 
