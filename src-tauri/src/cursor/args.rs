@@ -20,6 +20,7 @@ pub(crate) fn apply_cursor_args(command: &mut Command, value: Option<&str>) -> R
     Ok(())
 }
 
+#[allow(dead_code)]
 pub(crate) fn resolve_workspace_cursor_args(
     _entry: &WorkspaceEntry,
     _parent_entry: Option<&WorkspaceEntry>,
@@ -35,6 +36,7 @@ pub(crate) fn resolve_workspace_cursor_args(
     None
 }
 
+#[allow(dead_code)]
 fn normalize_cursor_args(value: &str) -> Option<String> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
