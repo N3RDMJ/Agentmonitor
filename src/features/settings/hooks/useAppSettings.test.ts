@@ -157,4 +157,32 @@ describe("useAppSettings", () => {
       response,
     );
   });
+
+  it("normalizes cursor default mode to agent for invalid values", async () => {
+    getAppSettingsMock.mockResolvedValue({
+      cursorDefaultMode: "invalid" as unknown as AppSettings["cursorDefaultMode"],
+    } as AppSettings);
+
+    const { result } = renderHook(() => useAppSettings());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.cursorDefaultMode).toBe("agent");
+  });
+
+  it("preserves valid cursor operating modes including debug", async () => {
+    for (const mode of ["agent", "plan", "ask", "debug"] as const) {
+      cleanup();
+      vi.clearAllMocks();
+      getAppSettingsMock.mockResolvedValue({
+        cursorDefaultMode: mode,
+      } as AppSettings);
+
+      const { result } = renderHook(() => useAppSettings());
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      expect(result.current.settings.cursorDefaultMode).toBe(mode);
+    }
+  });
 });

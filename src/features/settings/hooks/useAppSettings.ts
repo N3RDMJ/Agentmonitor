@@ -106,7 +106,7 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     : hasStoredSelection
       ? storedOpenAppId
       : normalizedTargets[0]?.id ?? DEFAULT_OPEN_APP_ID;
-  const allowedCursorModes = new Set(["agent", "plan", "ask"]);
+  const allowedCursorModes = new Set(["agent", "plan", "ask", "debug"]);
   const allowedCursorFormats = new Set(["text", "json", "stream-json"]);
   return {
     ...settings,
