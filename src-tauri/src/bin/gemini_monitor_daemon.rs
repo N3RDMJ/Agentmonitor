@@ -63,7 +63,7 @@ mod gemini {
             cursor_args: settings.cursor_args.clone(),
             cursor_settings: CursorCliSettings {
                 vim_mode: settings.cursor_vim_mode,
-                default_mode: settings.cursor_default_mode.clone(),
+                default_mode: settings.cursor_default_mode.to_string(),
                 output_format: settings.cursor_output_format.clone(),
                 attribute_commits: settings.cursor_attribute_commits,
                 attribute_prs: settings.cursor_attribute_prs,

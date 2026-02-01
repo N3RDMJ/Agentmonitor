@@ -307,7 +307,7 @@ pub(crate) struct AppSettings {
     #[serde(default, rename = "cursorVimMode")]
     pub(crate) cursor_vim_mode: bool,
     #[serde(default = "default_cursor_default_mode", rename = "cursorDefaultMode")]
-    pub(crate) cursor_default_mode: String,
+    pub(crate) cursor_default_mode: CursorOperatingMode,
     #[serde(default = "default_cursor_output_format", rename = "cursorOutputFormat")]
     pub(crate) cursor_output_format: String,
     #[serde(default, rename = "cursorAttributeCommits")]
@@ -502,12 +502,38 @@ impl Default for BackendMode {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum CursorOperatingMode {
+    Agent,
+    Plan,
+    Ask,
+    Debug,
+}
+
+impl Default for CursorOperatingMode {
+    fn default() -> Self {
+        CursorOperatingMode::Agent
+    }
+}
+
+impl std::fmt::Display for CursorOperatingMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CursorOperatingMode::Agent => write!(f, "agent"),
+            CursorOperatingMode::Plan => write!(f, "plan"),
+            CursorOperatingMode::Ask => write!(f, "ask"),
+            CursorOperatingMode::Debug => write!(f, "debug"),
+        }
+    }
+}
+
 fn default_cli_type() -> String {
     "gemini".to_string()
 }
 
-fn default_cursor_default_mode() -> String {
-    "agent".to_string()
+fn default_cursor_default_mode() -> CursorOperatingMode {
+    CursorOperatingMode::Agent
 }
 
 fn default_cursor_output_format() -> String {
@@ -839,7 +865,7 @@ mod tests {
         assert!(settings.cursor_bin.is_none());
         assert!(settings.cursor_args.is_none());
         assert!(!settings.cursor_vim_mode);
-        assert_eq!(settings.cursor_default_mode, "agent");
+        assert_eq!(settings.cursor_default_mode, CursorOperatingMode::Agent);
         assert_eq!(settings.cursor_output_format, "stream-json");
         assert!(!settings.cursor_attribute_commits);
         assert!(!settings.cursor_attribute_prs);
@@ -975,5 +1001,67 @@ mod tests {
         assert!(settings.sort_order.is_none());
         assert!(settings.group_id.is_none());
         assert!(settings.git_root.is_none());
+    }
+
+    #[test]
+    fn cursor_operating_mode_serialization() {
+        // Test all modes serialize to lowercase strings
+        assert_eq!(
+            serde_json::to_string(&CursorOperatingMode::Agent).unwrap(),
+            r#""agent""#
+        );
+        assert_eq!(
+            serde_json::to_string(&CursorOperatingMode::Plan).unwrap(),
+            r#""plan""#
+        );
+        assert_eq!(
+            serde_json::to_string(&CursorOperatingMode::Ask).unwrap(),
+            r#""ask""#
+        );
+        assert_eq!(
+            serde_json::to_string(&CursorOperatingMode::Debug).unwrap(),
+            r#""debug""#
+        );
+    }
+
+    #[test]
+    fn cursor_operating_mode_deserialization() {
+        // Test all modes deserialize from lowercase strings
+        assert_eq!(
+            serde_json::from_str::<CursorOperatingMode>(r#""agent""#).unwrap(),
+            CursorOperatingMode::Agent
+        );
+        assert_eq!(
+            serde_json::from_str::<CursorOperatingMode>(r#""plan""#).unwrap(),
+            CursorOperatingMode::Plan
+        );
+        assert_eq!(
+            serde_json::from_str::<CursorOperatingMode>(r#""ask""#).unwrap(),
+            CursorOperatingMode::Ask
+        );
+        assert_eq!(
+            serde_json::from_str::<CursorOperatingMode>(r#""debug""#).unwrap(),
+            CursorOperatingMode::Debug
+        );
+    }
+
+    #[test]
+    fn cursor_operating_mode_display() {
+        // Test Display trait for CLI argument generation
+        assert_eq!(CursorOperatingMode::Agent.to_string(), "agent");
+        assert_eq!(CursorOperatingMode::Plan.to_string(), "plan");
+        assert_eq!(CursorOperatingMode::Ask.to_string(), "ask");
+        assert_eq!(CursorOperatingMode::Debug.to_string(), "debug");
+    }
+
+    #[test]
+    fn app_settings_cursor_mode_round_trip() {
+        // Test round-trip serialization with debug mode
+        let mut settings = AppSettings::default();
+        settings.cursor_default_mode = CursorOperatingMode::Debug;
+
+        let json = serde_json::to_string(&settings).expect("serialize settings");
+        let decoded: AppSettings = serde_json::from_str(&json).expect("deserialize settings");
+        assert_eq!(decoded.cursor_default_mode, CursorOperatingMode::Debug);
     }
 }

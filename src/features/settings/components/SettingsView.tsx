@@ -2864,9 +2864,10 @@ export function SettingsView({
                         <option value="agent">Agent (full access)</option>
                         <option value="plan">Plan (design before coding)</option>
                         <option value="ask">Ask (read-only exploration)</option>
+                        <option value="debug">Debug (systematic bug fixing)</option>
                       </select>
                       <div className="settings-help">
-                        Agent mode has full tool access. Plan mode helps design before coding. Ask mode is read-only.
+                        Agent mode has full tool access. Plan mode helps design before coding. Ask mode is read-only. Debug mode systematically finds and fixes bugs.
                       </div>
                     </div>
 

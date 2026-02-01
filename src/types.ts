@@ -90,7 +90,7 @@ export type AccessMode = "read-only" | "current" | "full-access";
 export type BackendMode = "local" | "remote";
 export type ThemePreference = "system" | "light" | "dark" | "dim";
 export type CliType = "gemini" | "cursor";
-export type CursorOperatingMode = "agent" | "plan" | "ask";
+export type CursorOperatingMode = "agent" | "plan" | "ask" | "debug";
 export type CursorOutputFormat = "text" | "json" | "stream-json";
 
 
