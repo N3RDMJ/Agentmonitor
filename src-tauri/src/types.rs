@@ -306,7 +306,11 @@ pub(crate) struct AppSettings {
     pub(crate) cursor_args: Option<String>,
     #[serde(default, rename = "cursorVimMode")]
     pub(crate) cursor_vim_mode: bool,
-    #[serde(default = "default_cursor_default_mode", rename = "cursorDefaultMode")]
+    #[serde(
+        default = "default_cursor_default_mode",
+        rename = "cursorDefaultMode",
+        deserialize_with = "deserialize_cursor_mode"
+    )]
     pub(crate) cursor_default_mode: CursorOperatingMode,
     #[serde(default = "default_cursor_output_format", rename = "cursorOutputFormat")]
     pub(crate) cursor_output_format: String,
@@ -525,6 +529,24 @@ impl std::fmt::Display for CursorOperatingMode {
             CursorOperatingMode::Ask => write!(f, "ask"),
             CursorOperatingMode::Debug => write!(f, "debug"),
         }
+    }
+}
+
+/// Custom deserializer that falls back to default on invalid values.
+/// This prevents data loss when a user has an invalid mode in their settings.
+fn deserialize_cursor_mode<'de, D>(deserializer: D) -> Result<CursorOperatingMode, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::Deserialize;
+    // Deserialize as a string first, then parse to enum
+    let s = String::deserialize(deserializer).unwrap_or_else(|_| "agent".to_string());
+    match s.as_str() {
+        "agent" => Ok(CursorOperatingMode::Agent),
+        "plan" => Ok(CursorOperatingMode::Plan),
+        "ask" => Ok(CursorOperatingMode::Ask),
+        "debug" => Ok(CursorOperatingMode::Debug),
+        _ => Ok(CursorOperatingMode::Agent), // Fall back to default for unknown values
     }
 }
 
@@ -851,7 +873,8 @@ impl Default for AppSettings {
 #[cfg(test)]
 mod tests {
     use super::{
-        AppSettings, BackendMode, WorkspaceEntry, WorkspaceGroup, WorkspaceKind, WorkspaceSettings,
+        AppSettings, BackendMode, CursorOperatingMode, WorkspaceEntry, WorkspaceGroup,
+        WorkspaceKind, WorkspaceSettings,
     };
 
     #[test]
@@ -1063,5 +1086,17 @@ mod tests {
         let json = serde_json::to_string(&settings).expect("serialize settings");
         let decoded: AppSettings = serde_json::from_str(&json).expect("deserialize settings");
         assert_eq!(decoded.cursor_default_mode, CursorOperatingMode::Debug);
+    }
+
+    #[test]
+    fn app_settings_invalid_cursor_mode_falls_back_to_default() {
+        // Test that invalid cursor mode values don't cause data loss
+        // This simulates a user having an old/invalid value in their settings.json
+        let json = r#"{"cursorDefaultMode": "invalid_mode", "theme": "dark"}"#;
+        let settings: AppSettings = serde_json::from_str(json).expect("should not fail");
+        // Invalid mode should fall back to Agent (default)
+        assert_eq!(settings.cursor_default_mode, CursorOperatingMode::Agent);
+        // Other settings should be preserved
+        assert_eq!(settings.theme, "dark");
     }
 }
