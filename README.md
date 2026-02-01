@@ -64,12 +64,21 @@ npm run tauri:build  # Production (creates .app and .dmg)
 
 ### For Users (Pre-built Release)
 
-- **Gemini CLI** installed and available as `gemini` in your PATH
-  - Install from [Google AI Studio](https://aistudio.google.com/) or follow the [Gemini CLI documentation](https://ai.google.dev/gemini-api/docs/)
-- Git CLI (optional, for Git panel features)
-- GitHub CLI (`gh`) for the Issues panel (optional)
+1. **Install Gemini CLI** (requires Node.js 20+):
+   ```bash
+   npm install -g @google/gemini-cli
+   ```
+   Or run without installing: `npx @google/gemini-cli`
 
-If the `gemini` binary is not in `PATH`, you can configure a custom path in the app settings.
+2. **Authenticate** by running `gemini` in your terminal and signing in with your Google account
+
+3. **Download GeminiMonitor** from the releases page and open it
+
+The app will detect the Gemini CLI automatically. If not found, you can configure the path in Settings → Run Doctor.
+
+**Optional:**
+- Git CLI (for Git panel features)
+- GitHub CLI (`gh`) for the Issues panel
 
 ### For Developers (Building from Source)
 
