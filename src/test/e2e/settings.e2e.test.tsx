@@ -18,16 +18,29 @@ import {
   defaultAppSettings,
   resetMocks,
 } from "./mocks/tauri.mock";
-import type { AppSettings, CodexDoctorResult } from "../../types";
+import type { AppSettings } from "../../types";
 
 // Import hooks after mocking (mocks are set up in setup.ts)
 import { useAppSettingsController } from "../../features/app/hooks/useAppSettingsController";
 
+// Doctor result shape matching the gemini_doctor mock handler
+type MockDoctorResult = {
+  ok: boolean;
+  geminiBin: string | null;
+  version: string | null;
+  appServerOk: boolean;
+  details: string | null;
+  path: string | null;
+  nodeOk: boolean;
+  nodeVersion: string | null;
+  nodeDetails: string | null;
+};
+
 // Helper to create mock doctor result
-function createMockDoctorResult(overrides: Partial<CodexDoctorResult> = {}): CodexDoctorResult {
+function createMockDoctorResult(overrides: Partial<MockDoctorResult> = {}): MockDoctorResult {
   return {
     ok: true,
-    codexBin: "/usr/local/bin/gemini",
+    geminiBin: "/usr/local/bin/gemini",
     version: "1.0.0",
     appServerOk: true,
     details: null,
@@ -388,7 +401,7 @@ describe("Settings Management E2E", () => {
     it("runs doctor check successfully", async () => {
       const doctorResult = createMockDoctorResult({
         ok: true,
-        codexBin: "/usr/local/bin/gemini",
+        geminiBin: "/usr/local/bin/gemini",
         version: "2.0.0",
         details: null,
       });
@@ -413,7 +426,7 @@ describe("Settings Management E2E", () => {
     it("handles doctor check with errors", async () => {
       const doctorResult = createMockDoctorResult({
         ok: false,
-        codexBin: null,
+        geminiBin: null,
         version: null,
         details: "Gemini CLI not found in PATH",
       });
@@ -426,13 +439,13 @@ describe("Settings Management E2E", () => {
         expect(result.current.appSettingsLoading).toBe(false);
       });
 
-      let doctorResponse: CodexDoctorResult | undefined;
+      let doctorResponse: unknown;
       await act(async () => {
         doctorResponse = await result.current.doctor(null, null);
       });
 
-      expect(doctorResponse?.ok).toBe(false);
-      expect(doctorResponse?.details).toBe("Gemini CLI not found in PATH");
+      expect((doctorResponse as MockDoctorResult)?.ok).toBe(false);
+      expect((doctorResponse as MockDoctorResult)?.details).toBe("Gemini CLI not found in PATH");
     });
   });
 
