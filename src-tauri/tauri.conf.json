@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Codex Monitor",
+  "productName": "Agent Monitor",
   "version": "0.7.42",
   "identifier": "com.dimillian.codexmonitor",
   "build": {
@@ -13,7 +13,7 @@
     "macOSPrivateApi": true,
     "windows": [
       {
-        "title": "Codex Monitor",
+        "title": "Agent Monitor",
         "width": 1200,
         "height": 700,
         "minWidth": 360,
