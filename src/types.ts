@@ -6,7 +6,32 @@ export type WorkspaceSettings = {
   geminiHome?: string | null;
   geminiArgs?: string | null;
   launchScript?: string | null;
+  launchScripts?: LaunchScriptEntry[] | null;
   worktreeSetupScript?: string | null;
+};
+
+export type LaunchScriptIconId =
+  | "play"
+  | "build"
+  | "debug"
+  | "wrench"
+  | "terminal"
+  | "code"
+  | "server"
+  | "database"
+  | "package"
+  | "test"
+  | "lint"
+  | "dev"
+  | "git"
+  | "config"
+  | "logs";
+
+export type LaunchScriptEntry = {
+  id: string;
+  script: string;
+  icon: LaunchScriptIconId;
+  label?: string | null;
 };
 
 export type WorkspaceGroup = {
@@ -80,6 +105,8 @@ export type ThreadSummary = {
   updatedAt: number;
 };
 
+export type ThreadListSortKey = "created_at" | "updated_at";
+
 export type ReviewTarget =
   | { type: "uncommittedChanges" }
   | { type: "baseBranch"; branch: string }
@@ -89,9 +116,7 @@ export type ReviewTarget =
 export type AccessMode = "read-only" | "current" | "full-access";
 export type BackendMode = "local" | "remote";
 export type ThemePreference = "system" | "light" | "dark" | "dim";
-export type CliType = "gemini" | "cursor" | "claude";
-export type CursorOperatingMode = "agent" | "plan" | "ask" | "debug";
-export type CursorOutputFormat = "text" | "json" | "stream-json";
+export type PersonalityPreference = "friendly" | "pragmatic";
 
 
 export type ComposerEditorPreset = "default" | "helpful" | "smart";
@@ -135,6 +160,7 @@ export type AppSettings = {
   remoteBackendHost: string;
   remoteBackendToken: string | null;
   defaultAccessMode: AccessMode;
+  reviewDeliveryMode: "inline" | "detached";
   composerModelShortcut: string | null;
   composerAccessShortcut: string | null;
   composerReasoningShortcut: string | null;
@@ -146,6 +172,7 @@ export type AppSettings = {
   archiveThreadShortcut: string | null;
   toggleProjectsSidebarShortcut: string | null;
   toggleGitSidebarShortcut: string | null;
+  branchSwitcherShortcut: string | null;
   toggleDebugPanelShortcut: string | null;
   toggleTerminalShortcut: string | null;
   cycleAgentNextShortcut: string | null;
@@ -161,11 +188,15 @@ export type AppSettings = {
   codeFontFamily: string;
   codeFontSize: number;
   notificationSoundsEnabled: boolean;
+  systemNotificationsEnabled: boolean;
   preloadGitDiffs: boolean;
+  gitDiffIgnoreWhitespaceChanges: boolean;
   experimentalCollabEnabled: boolean;
-  experimentalCollaborationModesEnabled: boolean;
-  experimentalSteerEnabled: boolean;
-  experimentalUnifiedExecEnabled: boolean;
+  collaborationModesEnabled: boolean;
+  steerEnabled: boolean;
+  unifiedExecEnabled: boolean;
+  experimentalAppsEnabled: boolean;
+  personality: PersonalityPreference;
   dictationEnabled: boolean;
   dictationModelId: string;
   dictationPreferredLanguage: string | null;
@@ -256,6 +287,8 @@ export type GitFileStatus = {
 export type GitFileDiff = {
   path: string;
   diff: string;
+  oldLines?: string[];
+  newLines?: string[];
   isBinary?: boolean;
   isImage?: boolean;
   oldImageData?: string | null;
@@ -268,6 +301,8 @@ export type GitCommitDiff = {
   path: string;
   status: string;
   diff: string;
+  oldLines?: string[];
+  newLines?: string[];
   isBinary?: boolean;
   isImage?: boolean;
   oldImageData?: string | null;
@@ -457,6 +492,15 @@ export type SkillOption = {
   name: string;
   path: string;
   description?: string;
+};
+
+export type AppOption = {
+  id: string;
+  name: string;
+  description?: string;
+  isAccessible: boolean;
+  installUrl?: string | null;
+  distributionChannel?: string | null;
 };
 
 export type CustomPromptOption = {

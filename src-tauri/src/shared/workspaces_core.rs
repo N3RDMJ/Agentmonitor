@@ -5,8 +5,10 @@ use std::sync::Arc;
 
 use tokio::sync::Mutex;
 
-use crate::backend::app_server::{CliSpawnConfig, WorkspaceSession};
-use crate::gemini::{args::resolve_workspace_gemini_args, build_cli_spawn_config, home::resolve_workspace_gemini_home};
+use crate::backend::app_server::WorkspaceSession;
+use crate::codex::args::resolve_workspace_codex_args;
+use crate::codex::home::resolve_workspace_codex_home;
+use crate::shared::process_core::kill_child_process_tree;
 use crate::storage::write_workspaces;
 use crate::types::{
     AppSettings, WorkspaceEntry, WorkspaceInfo, WorkspaceKind, WorkspaceSettings, WorktreeInfo,
@@ -16,6 +18,44 @@ use uuid::Uuid;
 
 pub(crate) const WORKTREE_SETUP_MARKERS_DIR: &str = "worktree-setup";
 pub(crate) const WORKTREE_SETUP_MARKER_EXT: &str = "ran";
+const AGENTS_MD_FILE_NAME: &str = "AGENTS.md";
+
+fn copy_agents_md_from_parent_to_worktree(
+    parent_repo_root: &PathBuf,
+    worktree_root: &PathBuf,
+) -> Result<(), String> {
+    let source_path = parent_repo_root.join(AGENTS_MD_FILE_NAME);
+    if !source_path.is_file() {
+        return Ok(());
+    }
+
+    let destination_path = worktree_root.join(AGENTS_MD_FILE_NAME);
+    if destination_path.is_file() {
+        return Ok(());
+    }
+
+    let temp_path = worktree_root.join(format!("{AGENTS_MD_FILE_NAME}.tmp"));
+
+    std::fs::copy(&source_path, &temp_path).map_err(|err| {
+        format!(
+            "Failed to copy {} from {} to {}: {err}",
+            AGENTS_MD_FILE_NAME,
+            source_path.display(),
+            temp_path.display()
+        )
+    })?;
+
+    std::fs::rename(&temp_path, &destination_path).map_err(|err| {
+        let _ = std::fs::remove_file(&temp_path);
+        format!(
+            "Failed to finalize {} copy to {}: {err}",
+            AGENTS_MD_FILE_NAME,
+            destination_path.display()
+        )
+    })?;
+
+    Ok(())
+}
 
 pub(crate) fn normalize_setup_script(script: Option<String>) -> Option<String> {
     match script {
@@ -193,7 +233,7 @@ where
             workspaces.remove(&entry.id);
         }
         let mut child = session.child.lock().await;
-        let _ = child.kill().await;
+        kill_child_process_tree(&mut child).await;
         return Err(error);
     }
 
@@ -244,6 +284,8 @@ pub(crate) async fn add_worktree_core<
 >(
     parent_id: String,
     branch: String,
+    name: Option<String>,
+    copy_agents_md: bool,
     data_dir: &PathBuf,
     workspaces: &Mutex<HashMap<String, WorkspaceEntry>>,
     sessions: &Mutex<HashMap<String, Arc<WorkspaceSession>>>,
@@ -272,6 +314,9 @@ where
     if branch.is_empty() {
         return Err("Branch name is required.".to_string());
     }
+    let name = name
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty());
 
     let parent_entry = {
         let workspaces = workspaces.lock().await;
@@ -330,9 +375,20 @@ where
         .await?;
     }
 
+    if copy_agents_md {
+        if let Err(error) = copy_agents_md_from_parent_to_worktree(&repo_path, &worktree_path) {
+            eprintln!(
+                "add_worktree: optional {} copy failed for {}: {}",
+                AGENTS_MD_FILE_NAME,
+                worktree_path.display(),
+                error
+            );
+        }
+    }
+
     let entry = WorkspaceEntry {
         id: Uuid::new_v4().to_string(),
-        name: branch.clone(),
+        name: name.clone().unwrap_or_else(|| branch.clone()),
         path: worktree_path_string,
         gemini_bin: parent_entry.gemini_bin.clone(),
         kind: WorkspaceKind::Worktree,
@@ -405,7 +461,7 @@ async fn kill_session_by_id(
 ) {
     if let Some(session) = sessions.lock().await.remove(id) {
         let mut child = session.child.lock().await;
-        let _ = child.kill().await;
+        kill_child_process_tree(&mut child).await;
     }
 }
 
@@ -453,6 +509,8 @@ where
     let mut failures: Vec<(String, String)> = Vec::new();
 
     for child in &child_worktrees {
+        kill_session_by_id(sessions, &child.id).await;
+
         let child_path = PathBuf::from(&child.path);
         if child_path.exists() {
             if let Err(error) = run_git_command(
@@ -480,8 +538,6 @@ where
                 }
             }
         }
-
-        kill_session_by_id(sessions, &child.id).await;
         removed_child_ids.push(child.id.clone());
     }
 
@@ -555,6 +611,8 @@ where
 
     let parent_path = PathBuf::from(&parent.path);
     let entry_path = PathBuf::from(&entry.path);
+    kill_session_by_id(sessions, &entry.id).await;
+
     if entry_path.exists() {
         if let Err(error) = run_git_command(
             &parent_path,
@@ -572,8 +630,6 @@ where
         }
     }
     let _ = run_git_command(&parent_path, &["worktree", "prune", "--expire", "now"]).await;
-
-    kill_session_by_id(sessions, &entry.id).await;
 
     {
         let mut workspaces = workspaces.lock().await;
@@ -690,7 +746,9 @@ where
             Some(entry) => entry,
             None => return Err("workspace not found".to_string()),
         };
-        entry.name = final_branch.clone();
+        if entry.name.trim() == old_branch {
+            entry.name = final_branch.clone();
+        }
         entry.path = next_path_string.clone();
         match entry.worktree.as_mut() {
             Some(worktree) => {
@@ -949,7 +1007,7 @@ where
             .insert(entry_snapshot.id.clone(), new_session)
         {
             let mut child = old_session.child.lock().await;
-            let _ = child.kill().await;
+            kill_child_process_tree(&mut child).await;
         }
     }
     if gemini_home_changed || gemini_args_changed {
@@ -985,7 +1043,7 @@ where
                 .insert(child.id.clone(), new_session)
             {
                 let mut child = old_session.child.lock().await;
-                let _ = child.kill().await;
+                kill_child_process_tree(&mut child).await;
             }
         }
     }
@@ -1093,4 +1151,57 @@ fn sort_workspaces(workspaces: &mut [WorkspaceInfo]) {
             .cmp(&b.name)
             .then_with(|| a.id.cmp(&b.id))
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::copy_agents_md_from_parent_to_worktree;
+    use super::AGENTS_MD_FILE_NAME;
+    use uuid::Uuid;
+
+    fn make_temp_dir() -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("codex-monitor-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("failed to create temp dir");
+        dir
+    }
+
+    #[test]
+    fn copies_agents_md_when_missing_in_worktree() {
+        let parent = make_temp_dir();
+        let worktree = make_temp_dir();
+        let parent_agents = parent.join(AGENTS_MD_FILE_NAME);
+        let worktree_agents = worktree.join(AGENTS_MD_FILE_NAME);
+
+        std::fs::write(&parent_agents, "parent").expect("failed to write parent AGENTS.md");
+
+        copy_agents_md_from_parent_to_worktree(&parent, &worktree).expect("copy should succeed");
+
+        let copied = std::fs::read_to_string(&worktree_agents)
+            .expect("worktree AGENTS.md should exist after copy");
+        assert_eq!(copied, "parent");
+
+        let _ = std::fs::remove_dir_all(parent);
+        let _ = std::fs::remove_dir_all(worktree);
+    }
+
+    #[test]
+    fn does_not_overwrite_existing_worktree_agents_md() {
+        let parent = make_temp_dir();
+        let worktree = make_temp_dir();
+        let parent_agents = parent.join(AGENTS_MD_FILE_NAME);
+        let worktree_agents = worktree.join(AGENTS_MD_FILE_NAME);
+
+        std::fs::write(&parent_agents, "parent").expect("failed to write parent AGENTS.md");
+        std::fs::write(&worktree_agents, "branch-specific")
+            .expect("failed to write worktree AGENTS.md");
+
+        copy_agents_md_from_parent_to_worktree(&parent, &worktree).expect("copy should succeed");
+
+        let retained = std::fs::read_to_string(&worktree_agents)
+            .expect("worktree AGENTS.md should still exist");
+        assert_eq!(retained, "branch-specific");
+
+        let _ = std::fs::remove_dir_all(parent);
+        let _ = std::fs::remove_dir_all(worktree);
+    }
 }

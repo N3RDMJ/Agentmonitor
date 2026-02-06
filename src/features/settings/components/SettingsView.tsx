@@ -15,7 +15,7 @@ import Trash2 from "lucide-react/dist/esm/icons/trash-2";
 import X from "lucide-react/dist/esm/icons/x";
 import FlaskConical from "lucide-react/dist/esm/icons/flask-conical";
 import ExternalLink from "lucide-react/dist/esm/icons/external-link";
-import Puzzle from "lucide-react/dist/esm/icons/puzzle";
+import Layers from "lucide-react/dist/esm/icons/layers";
 import type {
   AppSettings,
   GeminiDoctorResult,
@@ -28,12 +28,19 @@ import type {
 } from "../../../types";
 import { formatDownloadSize } from "../../../utils/formatting";
 import {
+  fileManagerName,
+  isMacPlatform,
+  isWindowsPlatform,
+  openInFileManagerLabel,
+} from "../../../utils/platformPaths";
+import {
   buildShortcutValue,
   formatShortcut,
   getDefaultInterruptShortcut,
 } from "../../../utils/shortcuts";
 import { clampUiScale } from "../../../utils/uiScale";
-import { getGeminiConfigPath } from "../../../services/tauri";
+import { getCodexConfigPath } from "../../../services/tauri";
+import { pushErrorToast } from "../../../services/toasts";
 import {
   DEFAULT_CODE_FONT_FAMILY,
   DEFAULT_UI_FONT_FAMILY,
@@ -126,6 +133,13 @@ const normalizeOverrideValue = (value: string): string | null => {
   return trimmed ? trimmed : null;
 };
 
+const normalizeWorktreeSetupScript = (
+  value: string | null | undefined,
+): string | null => {
+  const next = value ?? "";
+  return next.trim().length > 0 ? next : null;
+};
+
 const buildWorkspaceOverrideDrafts = (
   projects: WorkspaceInfo[],
   prev: Record<string, string>,
@@ -175,6 +189,7 @@ export type SettingsViewProps = {
   scaleShortcutTitle: string;
   scaleShortcutText: string;
   onTestNotificationSound: () => void;
+  onTestSystemNotification: () => void;
   dictationModelStatus?: DictationModelStatus | null;
   onDownloadDictationModel?: () => void;
   onCancelDictationDownload?: () => void;
@@ -188,13 +203,14 @@ export type SettingsViewProps = {
 type SettingsSection =
   | "skills"
   | "projects"
+  | "environments"
   | "display"
   | "composer"
   | "dictation"
   | "shortcuts"
   | "open-apps"
   | "git";
-type GeminiSection = SettingsSection | "gemini" | "experimental";
+type CodexSection = SettingsSection | "codex" | "features";
 type ShortcutSettingKey =
   | "composerModelShortcut"
   | "composerAccessShortcut"
@@ -207,6 +223,7 @@ type ShortcutSettingKey =
   | "archiveThreadShortcut"
   | "toggleProjectsSidebarShortcut"
   | "toggleGitSidebarShortcut"
+  | "branchSwitcherShortcut"
   | "toggleDebugPanelShortcut"
   | "toggleTerminalShortcut"
   | "cycleAgentNextShortcut"
@@ -225,6 +242,7 @@ type ShortcutDraftKey =
   | "archiveThread"
   | "projectsSidebar"
   | "gitSidebar"
+  | "branchSwitcher"
   | "debugPanel"
   | "terminal"
   | "cycleAgentNext"
@@ -246,6 +264,7 @@ const shortcutDraftKeyBySetting: Record<ShortcutSettingKey, ShortcutDraftKey> = 
   archiveThreadShortcut: "archiveThread",
   toggleProjectsSidebarShortcut: "projectsSidebar",
   toggleGitSidebarShortcut: "gitSidebar",
+  branchSwitcherShortcut: "branchSwitcher",
   toggleDebugPanelShortcut: "debugPanel",
   toggleTerminalShortcut: "terminal",
   cycleAgentNextShortcut: "cycleAgentNext",
@@ -259,6 +278,34 @@ const buildOpenAppDrafts = (targets: OpenAppTarget[]): OpenAppDraft[] =>
     ...target,
     argsText: target.args.join(" "),
   }));
+
+const isOpenAppLabelValid = (label: string) => label.trim().length > 0;
+
+const isOpenAppDraftComplete = (draft: OpenAppDraft) => {
+  if (!isOpenAppLabelValid(draft.label)) {
+    return false;
+  }
+  if (draft.kind === "app") {
+    return Boolean(draft.appName?.trim());
+  }
+  if (draft.kind === "command") {
+    return Boolean(draft.command?.trim());
+  }
+  return true;
+};
+
+const isOpenAppTargetComplete = (target: OpenAppTarget) => {
+  if (!isOpenAppLabelValid(target.label)) {
+    return false;
+  }
+  if (target.kind === "app") {
+    return Boolean(target.appName?.trim());
+  }
+  if (target.kind === "command") {
+    return Boolean(target.command?.trim());
+  }
+  return true;
+};
 
 const createOpenAppId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -290,6 +337,7 @@ export function SettingsView({
   scaleShortcutTitle,
   scaleShortcutText,
   onTestNotificationSound,
+  onTestSystemNotification,
   dictationModelStatus,
   onDownloadDictationModel,
   onCancelDictationDownload,
@@ -299,13 +347,21 @@ export function SettingsView({
   onRefreshSkills,
   activeWorkspace,
 }: SettingsViewProps) {
-  const [activeSection, setActiveSection] = useState<GeminiSection>("projects");
-  const [geminiPathDraft, setGeminiPathDraft] = useState(appSettings.geminiBin ?? "");
-  const [geminiArgsDraft, setGeminiArgsDraft] = useState(appSettings.geminiArgs ?? "");
-  const [cursorPathDraft, setCursorPathDraft] = useState(appSettings.cursorBin ?? "");
-  const [cursorArgsDraft, setCursorArgsDraft] = useState(appSettings.cursorArgs ?? "");
-  const [claudePathDraft, setClaudePathDraft] = useState(appSettings.claudeBin ?? "");
-  const [claudeArgsDraft, setClaudeArgsDraft] = useState(appSettings.claudeArgs ?? "");
+  const [activeSection, setActiveSection] = useState<CodexSection>("projects");
+  const [environmentWorkspaceId, setEnvironmentWorkspaceId] = useState<string | null>(
+    null,
+  );
+  const [environmentDraftScript, setEnvironmentDraftScript] = useState("");
+  const [environmentSavedScript, setEnvironmentSavedScript] = useState<string | null>(
+    null,
+  );
+  const [environmentLoadedWorkspaceId, setEnvironmentLoadedWorkspaceId] = useState<
+    string | null
+  >(null);
+  const [environmentError, setEnvironmentError] = useState<string | null>(null);
+  const [environmentSaving, setEnvironmentSaving] = useState(false);
+  const [codexPathDraft, setCodexPathDraft] = useState(appSettings.codexBin ?? "");
+  const [codexArgsDraft, setCodexArgsDraft] = useState(appSettings.codexArgs ?? "");
   const [remoteHostDraft, setRemoteHostDraft] = useState(appSettings.remoteBackendHost);
   const [remoteTokenDraft, setRemoteTokenDraft] = useState(appSettings.remoteBackendToken ?? "");
   const [scaleDraft, setScaleDraft] = useState(
@@ -391,6 +447,7 @@ export function SettingsView({
     archiveThread: appSettings.archiveThreadShortcut ?? "",
     projectsSidebar: appSettings.toggleProjectsSidebarShortcut ?? "",
     gitSidebar: appSettings.toggleGitSidebarShortcut ?? "",
+    branchSwitcher: appSettings.branchSwitcherShortcut ?? "",
     debugPanel: appSettings.toggleDebugPanelShortcut ?? "",
     terminal: appSettings.toggleTerminalShortcut ?? "",
     cycleAgentNext: appSettings.cycleAgentNextShortcut ?? "",
@@ -436,26 +493,12 @@ export function SettingsView({
   const globalConfigSaveLabel = globalConfigExists ? "Save" : "Create";
   const globalConfigSaveDisabled = globalConfigLoading || globalConfigSaving || !globalConfigDirty;
   const globalConfigRefreshDisabled = globalConfigLoading || globalConfigSaving;
-  const workspacePathPrefix = useMemo(() => {
-    if (!activeWorkspace?.path) {
-      return null;
-    }
-    return activeWorkspace.path.replace(/\/$/, "");
-  }, [activeWorkspace]);
-  const skillItems = useMemo(
-    () =>
-      skills.map((skill) => {
-        const workspaceRoot = workspacePathPrefix ? `${workspacePathPrefix}/` : null;
-        const scope =
-          workspacePathPrefix &&
-          (skill.path === workspacePathPrefix ||
-            (workspaceRoot && skill.path.startsWith(workspaceRoot)))
-            ? "workspace"
-            : "global";
-        return { ...skill, scope };
-      }),
-    [skills, workspacePathPrefix],
-  );
+  const optionKeyLabel = isMacPlatform() ? "Option" : "Alt";
+  const metaKeyLabel = isMacPlatform()
+    ? "Command"
+    : isWindowsPlatform()
+      ? "Windows"
+      : "Meta";
   const selectedDictationModel = useMemo(() => {
     return (
       DICTATION_MODELS.find(
@@ -468,8 +511,31 @@ export function SettingsView({
     () => groupedWorkspaces.flatMap((group) => group.workspaces),
     [groupedWorkspaces],
   );
-  const hasGeminiHomeOverrides = useMemo(
-    () => projects.some((workspace) => workspace.settings.geminiHome != null),
+  const mainWorkspaces = useMemo(
+    () => projects.filter((workspace) => (workspace.kind ?? "main") !== "worktree"),
+    [projects],
+  );
+  const environmentWorkspace = useMemo(() => {
+    if (mainWorkspaces.length === 0) {
+      return null;
+    }
+    if (environmentWorkspaceId) {
+      const found = mainWorkspaces.find((workspace) => workspace.id === environmentWorkspaceId);
+      if (found) {
+        return found;
+      }
+    }
+    return mainWorkspaces[0] ?? null;
+  }, [environmentWorkspaceId, mainWorkspaces]);
+  const environmentSavedScriptFromWorkspace = useMemo(() => {
+    return normalizeWorktreeSetupScript(environmentWorkspace?.settings.worktreeSetupScript);
+  }, [environmentWorkspace?.settings.worktreeSetupScript]);
+  const environmentDraftNormalized = useMemo(() => {
+    return normalizeWorktreeSetupScript(environmentDraftScript);
+  }, [environmentDraftScript]);
+  const environmentDirty = environmentDraftNormalized !== environmentSavedScript;
+  const hasCodexHomeOverrides = useMemo(
+    () => projects.some((workspace) => workspace.settings.codexHome != null),
     [projects],
   );
   const geminiHomePath = useMemo(() => {
@@ -603,6 +669,7 @@ export function SettingsView({
       archiveThread: appSettings.archiveThreadShortcut ?? "",
       projectsSidebar: appSettings.toggleProjectsSidebarShortcut ?? "",
       gitSidebar: appSettings.toggleGitSidebarShortcut ?? "",
+      branchSwitcher: appSettings.branchSwitcherShortcut ?? "",
       debugPanel: appSettings.toggleDebugPanelShortcut ?? "",
       terminal: appSettings.toggleTerminalShortcut ?? "",
       cycleAgentNext: appSettings.cycleAgentNextShortcut ?? "",
@@ -622,6 +689,7 @@ export function SettingsView({
     appSettings.archiveThreadShortcut,
     appSettings.toggleProjectsSidebarShortcut,
     appSettings.toggleGitSidebarShortcut,
+    appSettings.branchSwitcherShortcut,
     appSettings.toggleDebugPanelShortcut,
     appSettings.toggleTerminalShortcut,
     appSettings.cycleAgentNextShortcut,
@@ -716,25 +784,53 @@ export function SettingsView({
     }
   }, [initialSection]);
 
-  const nextGeminiBin = geminiPathDraft.trim() ? geminiPathDraft.trim() : null;
-  const nextGeminiArgs = geminiArgsDraft.trim() ? geminiArgsDraft.trim() : null;
-  const geminiDirty =
-    nextGeminiBin !== (appSettings.geminiBin ?? null) ||
-    nextGeminiArgs !== (appSettings.geminiArgs ?? null);
+  useEffect(() => {
+    if (!environmentWorkspace) {
+      setEnvironmentWorkspaceId(null);
+      setEnvironmentLoadedWorkspaceId(null);
+      setEnvironmentSavedScript(null);
+      setEnvironmentDraftScript("");
+      setEnvironmentError(null);
+      setEnvironmentSaving(false);
+      return;
+    }
 
-  const nextCursorBin = cursorPathDraft.trim() ? cursorPathDraft.trim() : null;
-  const nextCursorArgs = cursorArgsDraft.trim() ? cursorArgsDraft.trim() : null;
-  const cursorDirty =
-    nextCursorBin !== (appSettings.cursorBin ?? null) ||
-    nextCursorArgs !== (appSettings.cursorArgs ?? null);
+    if (environmentWorkspaceId !== environmentWorkspace.id) {
+      setEnvironmentWorkspaceId(environmentWorkspace.id);
+    }
+  }, [environmentWorkspace, environmentWorkspaceId]);
 
-  const nextClaudeBin = claudePathDraft.trim() ? claudePathDraft.trim() : null;
-  const nextClaudeArgs = claudeArgsDraft.trim() ? claudeArgsDraft.trim() : null;
-  const claudeDirty =
-    nextClaudeBin !== (appSettings.claudeBin ?? null) ||
-    nextClaudeArgs !== (appSettings.claudeArgs ?? null);
+  useEffect(() => {
+    if (!environmentWorkspace) {
+      return;
+    }
 
-  const cliSettingsDirty = geminiDirty || cursorDirty || claudeDirty;
+    if (environmentLoadedWorkspaceId !== environmentWorkspace.id) {
+      setEnvironmentLoadedWorkspaceId(environmentWorkspace.id);
+      setEnvironmentSavedScript(environmentSavedScriptFromWorkspace);
+      setEnvironmentDraftScript(environmentSavedScriptFromWorkspace ?? "");
+      setEnvironmentError(null);
+      return;
+    }
+
+    if (!environmentDirty && environmentSavedScript !== environmentSavedScriptFromWorkspace) {
+      setEnvironmentSavedScript(environmentSavedScriptFromWorkspace);
+      setEnvironmentDraftScript(environmentSavedScriptFromWorkspace ?? "");
+      setEnvironmentError(null);
+    }
+  }, [
+    environmentDirty,
+    environmentLoadedWorkspaceId,
+    environmentSavedScript,
+    environmentSavedScriptFromWorkspace,
+    environmentWorkspace,
+  ]);
+
+  const nextCodexBin = codexPathDraft.trim() ? codexPathDraft.trim() : null;
+  const nextCodexArgs = codexArgsDraft.trim() ? codexArgsDraft.trim() : null;
+  const codexDirty =
+    nextCodexBin !== (appSettings.codexBin ?? null) ||
+    nextCodexArgs !== (appSettings.codexArgs ?? null);
 
   const trimmedScale = scaleDraft.trim();
   const parsedPercent = trimmedScale
@@ -868,8 +964,13 @@ export function SettingsView({
   const handleCommitOpenApps = useCallback(
     async (drafts: OpenAppDraft[], selectedId = openAppSelectedId) => {
       const nextTargets = normalizeOpenAppTargets(drafts);
+      const resolvedSelectedId = nextTargets.find(
+        (target) => target.id === selectedId && isOpenAppTargetComplete(target),
+      )?.id;
+      const firstCompleteId = nextTargets.find(isOpenAppTargetComplete)?.id;
       const nextSelectedId =
-        nextTargets.find((target) => target.id === selectedId)?.id ??
+        resolvedSelectedId ??
+        firstCompleteId ??
         nextTargets[0]?.id ??
         DEFAULT_OPEN_APP_ID;
       setOpenAppDrafts(buildOpenAppDrafts(nextTargets));
@@ -962,6 +1063,10 @@ export function SettingsView({
   };
 
   const handleSelectOpenAppDefault = (id: string) => {
+    const selectedTarget = openAppDrafts.find((target) => target.id === id);
+    if (selectedTarget && !isOpenAppDraftComplete(selectedTarget)) {
+      return;
+    }
     setOpenAppSelectedId(id);
     if (typeof window !== "undefined") {
       window.localStorage.setItem(OPEN_APP_STORAGE_KEY, id);
@@ -1057,6 +1162,26 @@ export function SettingsView({
       return;
     }
     void updateShortcut(key, value);
+  };
+
+  const handleSaveEnvironmentSetup = async () => {
+    if (!environmentWorkspace || environmentSaving) {
+      return;
+    }
+    const nextScript = environmentDraftNormalized;
+    setEnvironmentSaving(true);
+    setEnvironmentError(null);
+    try {
+      await onUpdateWorkspaceSettings(environmentWorkspace.id, {
+        worktreeSetupScript: nextScript,
+      });
+      setEnvironmentSavedScript(nextScript);
+      setEnvironmentDraftScript(nextScript ?? "");
+    } catch (error) {
+      setEnvironmentError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setEnvironmentSaving(false);
+    }
   };
 
   const trimmedGroupName = newGroupName.trim();
@@ -1182,6 +1307,14 @@ export function SettingsView({
             </button>
             <button
               type="button"
+              className={`settings-nav ${activeSection === "environments" ? "active" : ""}`}
+              onClick={() => setActiveSection("environments")}
+            >
+              <Layers aria-hidden />
+              Environments
+            </button>
+            <button
+              type="button"
               className={`settings-nav ${activeSection === "display" ? "active" : ""}`}
               onClick={() => setActiveSection("display")}
             >
@@ -1246,11 +1379,11 @@ export function SettingsView({
             </button>
             <button
               type="button"
-              className={`settings-nav ${activeSection === "experimental" ? "active" : ""}`}
-              onClick={() => setActiveSection("experimental")}
+              className={`settings-nav ${activeSection === "features" ? "active" : ""}`}
+              onClick={() => setActiveSection("features")}
             >
               <FlaskConical aria-hidden />
-              Experimental
+              Features
             </button>
           </aside>
           <div className="settings-content">
@@ -1564,6 +1697,109 @@ export function SettingsView({
                 </div>
               </section>
             )}
+            {activeSection === "environments" && (
+              <section className="settings-section">
+                <div className="settings-section-title">Environments</div>
+                <div className="settings-section-subtitle">
+                  Configure per-project setup scripts that run after worktree creation.
+                </div>
+                {mainWorkspaces.length === 0 ? (
+                  <div className="settings-empty">No projects yet.</div>
+                ) : (
+                  <>
+                    <div className="settings-field">
+                      <label
+                        className="settings-field-label"
+                        htmlFor="settings-environment-project"
+                      >
+                        Project
+                      </label>
+                      <select
+                        id="settings-environment-project"
+                        className="settings-select"
+                        value={environmentWorkspace?.id ?? ""}
+                        onChange={(event) => setEnvironmentWorkspaceId(event.target.value)}
+                        disabled={environmentSaving}
+                      >
+                        {mainWorkspaces.map((workspace) => (
+                          <option key={workspace.id} value={workspace.id}>
+                            {workspace.name}
+                          </option>
+                        ))}
+                      </select>
+                      {environmentWorkspace ? (
+                        <div className="settings-help">{environmentWorkspace.path}</div>
+                      ) : null}
+                    </div>
+
+                    <div className="settings-field">
+                      <div className="settings-field-label">Setup script</div>
+                      <div className="settings-help">
+                        Runs once in a dedicated terminal after each new worktree is created.
+                      </div>
+                      {environmentError ? (
+                        <div className="settings-agents-error">{environmentError}</div>
+                      ) : null}
+                      <textarea
+                        className="settings-agents-textarea"
+                        value={environmentDraftScript}
+                        onChange={(event) => setEnvironmentDraftScript(event.target.value)}
+                        placeholder="pnpm install"
+                        spellCheck={false}
+                        disabled={environmentSaving}
+                      />
+                      <div className="settings-field-actions">
+                        <button
+                          type="button"
+                          className="ghost settings-button-compact"
+                          onClick={() => {
+                            const clipboard =
+                              typeof navigator === "undefined" ? null : navigator.clipboard;
+                            if (!clipboard?.writeText) {
+                              pushErrorToast({
+                                title: "Copy failed",
+                                message:
+                                  "Clipboard access is unavailable in this environment. Copy the script manually instead.",
+                              });
+                              return;
+                            }
+
+                            void clipboard.writeText(environmentDraftScript).catch(() => {
+                              pushErrorToast({
+                                title: "Copy failed",
+                                message:
+                                  "Could not write to the clipboard. Copy the script manually instead.",
+                              });
+                            });
+                          }}
+                          disabled={environmentSaving || environmentDraftScript.length === 0}
+                        >
+                          Copy
+                        </button>
+                        <button
+                          type="button"
+                          className="ghost settings-button-compact"
+                          onClick={() => setEnvironmentDraftScript(environmentSavedScript ?? "")}
+                          disabled={environmentSaving || !environmentDirty}
+                        >
+                          Reset
+                        </button>
+                        <button
+                          type="button"
+                          className="primary settings-button-compact"
+                          onClick={() => {
+                            void handleSaveEnvironmentSetup();
+                          }}
+                          disabled={environmentSaving || !environmentDirty}
+                        >
+                          {environmentSaving ? "Saving..." : "Save"}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </section>
+            )}
             {activeSection === "display" && (
               <section className="settings-section">
                 <div className="settings-section-title">Display &amp; Sound</div>
@@ -1814,6 +2050,27 @@ export function SettingsView({
                     <span className="settings-toggle-knob" />
                   </button>
                 </div>
+                <div className="settings-toggle-row">
+                  <div>
+                    <div className="settings-toggle-title">System notifications</div>
+                    <div className="settings-toggle-subtitle">
+                      Show a system notification when a long-running agent finishes while the window is unfocused.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className={`settings-toggle ${appSettings.systemNotificationsEnabled ? "on" : ""}`}
+                    onClick={() =>
+                      void onUpdateAppSettings({
+                        ...appSettings,
+                        systemNotificationsEnabled: !appSettings.systemNotificationsEnabled,
+                      })
+                    }
+                    aria-pressed={appSettings.systemNotificationsEnabled}
+                  >
+                    <span className="settings-toggle-knob" />
+                  </button>
+                </div>
                 <div className="settings-sound-actions">
                   <button
                     type="button"
@@ -1821,6 +2078,13 @@ export function SettingsView({
                     onClick={onTestNotificationSound}
                   >
                     Test sound
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost settings-button-compact"
+                    onClick={onTestSystemNotification}
+                  >
+                    Test notification
                   </button>
                 </div>
               </section>
@@ -1949,7 +2213,7 @@ export function SettingsView({
                   <div>
                     <div className="settings-toggle-title">Copy blocks without fences</div>
                     <div className="settings-toggle-subtitle">
-                      When enabled, Copy is plain text. Hold Option to include ``` fences.
+                      When enabled, Copy is plain text. Hold {optionKeyLabel} to include ``` fences.
                     </div>
                   </div>
                   <button
@@ -2160,10 +2424,10 @@ export function SettingsView({
                     }
                   >
                     <option value="">Off</option>
-                    <option value="alt">Option / Alt</option>
+                    <option value="alt">{optionKeyLabel}</option>
                     <option value="shift">Shift</option>
                     <option value="control">Control</option>
-                    <option value="meta">Command / Meta</option>
+                    <option value="meta">{metaKeyLabel}</option>
                   </select>
                   <div className="settings-help">
                     Hold the key to start dictation, release to stop and process.
@@ -2343,7 +2607,8 @@ export function SettingsView({
                     </button>
                   </div>
                   <div className="settings-help">
-                    Default: {formatShortcut("cmd+ctrl+a")}
+                    Default:{" "}
+                    {formatShortcut(isMacPlatform() ? "cmd+ctrl+a" : "ctrl+alt+a")}
                   </div>
                 </div>
                 <div className="settings-divider" />
@@ -2525,6 +2790,30 @@ export function SettingsView({
                   </div>
                 </div>
                 <div className="settings-field">
+                  <div className="settings-field-label">Branch switcher</div>
+                  <div className="settings-field-row">
+                    <input
+                      className="settings-input settings-input--shortcut"
+                      value={formatShortcut(shortcutDrafts.branchSwitcher)}
+                      onKeyDown={(event) =>
+                        handleShortcutKeyDown(event, "branchSwitcherShortcut")
+                      }
+                      placeholder="Type shortcut"
+                      readOnly
+                    />
+                    <button
+                      type="button"
+                      className="ghost settings-button-compact"
+                      onClick={() => void updateShortcut("branchSwitcherShortcut", null)}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <div className="settings-help">
+                    Default: {formatShortcut("cmd+b")}
+                  </div>
+                </div>
+                <div className="settings-field">
                   <div className="settings-field-label">Toggle debug panel</div>
                   <div className="settings-field-row">
                     <input
@@ -2598,7 +2887,10 @@ export function SettingsView({
                     </button>
                   </div>
                   <div className="settings-help">
-                    Default: {formatShortcut("cmd+ctrl+down")}
+                    Default:{" "}
+                    {formatShortcut(
+                      isMacPlatform() ? "cmd+ctrl+down" : "ctrl+alt+down",
+                    )}
                   </div>
                 </div>
                 <div className="settings-field">
@@ -2622,7 +2914,10 @@ export function SettingsView({
                     </button>
                   </div>
                   <div className="settings-help">
-                    Default: {formatShortcut("cmd+ctrl+up")}
+                    Default:{" "}
+                    {formatShortcut(
+                      isMacPlatform() ? "cmd+ctrl+up" : "ctrl+alt+up",
+                    )}
                   </div>
                 </div>
                 <div className="settings-field">
@@ -2646,7 +2941,12 @@ export function SettingsView({
                     </button>
                   </div>
                   <div className="settings-help">
-                    Default: {formatShortcut("cmd+shift+down")}
+                    Default:{" "}
+                    {formatShortcut(
+                      isMacPlatform()
+                        ? "cmd+shift+down"
+                        : "ctrl+alt+shift+down",
+                    )}
                   </div>
                 </div>
                 <div className="settings-field">
@@ -2670,7 +2970,10 @@ export function SettingsView({
                     </button>
                   </div>
                   <div className="settings-help">
-                    Default: {formatShortcut("cmd+shift+up")}
+                    Default:{" "}
+                    {formatShortcut(
+                      isMacPlatform() ? "cmd+shift+up" : "ctrl+alt+shift+up",
+                    )}
                   </div>
                 </div>
               </section>
@@ -2687,8 +2990,26 @@ export function SettingsView({
                       getKnownOpenAppIcon(target.id) ??
                       openAppIconById[target.id] ??
                       GENERIC_APP_ICON;
+                    const labelValid = isOpenAppLabelValid(target.label);
+                    const appNameValid =
+                      target.kind !== "app" || Boolean(target.appName?.trim());
+                    const commandValid =
+                      target.kind !== "command" || Boolean(target.command?.trim());
+                    const isComplete = labelValid && appNameValid && commandValid;
+                    const incompleteHint = !labelValid
+                      ? "Label required"
+                      : target.kind === "app"
+                        ? "App name required"
+                        : target.kind === "command"
+                          ? "Command required"
+                          : "Complete required fields";
                     return (
-                      <div key={target.id} className="settings-open-app-row">
+                      <div
+                        key={target.id}
+                        className={`settings-open-app-row${
+                          isComplete ? "" : " is-incomplete"
+                        }`}
+                      >
                         <div className="settings-open-app-icon-wrap" aria-hidden>
                           <img
                             className="settings-open-app-icon"
@@ -2714,6 +3035,7 @@ export function SettingsView({
                                 void handleCommitOpenApps(openAppDrafts);
                               }}
                               aria-label={`Open app label ${index + 1}`}
+                              data-invalid={!labelValid || undefined}
                             />
                           </label>
                           <label className="settings-open-app-field settings-open-app-field--type">
@@ -2731,7 +3053,7 @@ export function SettingsView({
                             >
                               <option value="app">App</option>
                               <option value="command">Command</option>
-                              <option value="finder">Finder</option>
+                              <option value="finder">{fileManagerName()}</option>
                             </select>
                           </label>
                           {target.kind === "app" && (
@@ -2750,6 +3072,7 @@ export function SettingsView({
                                   void handleCommitOpenApps(openAppDrafts);
                                 }}
                                 aria-label={`Open app name ${index + 1}`}
+                                data-invalid={!appNameValid || undefined}
                               />
                             </label>
                           )}
@@ -2769,6 +3092,7 @@ export function SettingsView({
                                   void handleCommitOpenApps(openAppDrafts);
                                 }}
                                 aria-label={`Open app command ${index + 1}`}
+                                data-invalid={!commandValid || undefined}
                               />
                             </label>
                           )}
@@ -2793,12 +3117,22 @@ export function SettingsView({
                           )}
                         </div>
                         <div className="settings-open-app-actions">
+                          {!isComplete && (
+                            <span
+                              className="settings-open-app-status"
+                              title={incompleteHint}
+                              aria-label={incompleteHint}
+                            >
+                              Incomplete
+                            </span>
+                          )}
                           <label className="settings-open-app-default">
                             <input
                               type="radio"
                               name="open-app-default"
                               checked={target.id === openAppSelectedId}
                               onChange={() => handleSelectOpenAppDefault(target.id)}
+                              disabled={!isComplete}
                             />
                             Default
                           </label>
@@ -2846,8 +3180,10 @@ export function SettingsView({
                     Add app
                   </button>
                   <div className="settings-help">
-                    Commands receive the selected path as the final argument. Apps use macOS open
-                    with optional args.
+                    Commands receive the selected path as the final argument.{" "}
+                    {isMacPlatform()
+                      ? "Apps open via `open -a` with optional args."
+                      : "Apps run as an executable with optional args."}
                   </div>
                 </div>
               </section>
@@ -2875,6 +3211,27 @@ export function SettingsView({
                       })
                     }
                     aria-pressed={appSettings.preloadGitDiffs}
+                  >
+                    <span className="settings-toggle-knob" />
+                  </button>
+                </div>
+                <div className="settings-toggle-row">
+                  <div>
+                    <div className="settings-toggle-title">Ignore whitespace changes</div>
+                    <div className="settings-toggle-subtitle">
+                      Hides whitespace-only changes in local and commit diffs.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className={`settings-toggle ${appSettings.gitDiffIgnoreWhitespaceChanges ? "on" : ""}`}
+                    onClick={() =>
+                      void onUpdateAppSettings({
+                        ...appSettings,
+                        gitDiffIgnoreWhitespaceChanges: !appSettings.gitDiffIgnoreWhitespaceChanges,
+                      })
+                    }
+                    aria-pressed={appSettings.gitDiffIgnoreWhitespaceChanges}
                   >
                     <span className="settings-toggle-knob" />
                   </button>
@@ -3127,32 +3484,111 @@ export function SettingsView({
                   </div>
                 )}
 
-                {/* Cursor CLI specific settings */}
-                {appSettings.cliType === "cursor" && (
-                  <>
-                    <div className="settings-field">
-                      <label className="settings-field-label" htmlFor="cursor-mode">
-                        Default operating mode
-                      </label>
-                      <select
-                        id="cursor-mode"
-                        className="settings-select"
-                        value={appSettings.cursorDefaultMode}
-                        onChange={(event) =>
-                          void onUpdateAppSettings({
-                            ...appSettings,
-                            cursorDefaultMode: event.target.value as AppSettings["cursorDefaultMode"],
-                          })
-                        }
-                      >
-                        <option value="agent">Agent (full access)</option>
-                        <option value="plan">Plan (design before coding)</option>
-                        <option value="ask">Ask (read-only exploration)</option>
-                        <option value="debug">Debug (systematic bug fixing)</option>
-                      </select>
-                      <div className="settings-help">
-                        Agent mode has full tool access. Plan mode helps design before coding. Ask mode is read-only. Debug mode systematically finds and fixes bugs.
-                      </div>
+                <div className="settings-field">
+                  <label className="settings-field-label" htmlFor="default-access">
+                    Default access mode
+                  </label>
+                  <select
+                    id="default-access"
+                    className="settings-select"
+                    value={appSettings.defaultAccessMode}
+                    onChange={(event) =>
+                      void onUpdateAppSettings({
+                        ...appSettings,
+                        defaultAccessMode: event.target.value as AppSettings["defaultAccessMode"],
+                      })
+                    }
+                  >
+                    <option value="read-only">Read only</option>
+                    <option value="current">On-request</option>
+                    <option value="full-access">Full access</option>
+                  </select>
+                </div>
+                <div className="settings-field">
+                  <label className="settings-field-label" htmlFor="review-delivery">
+                    Review mode
+                  </label>
+                  <select
+                    id="review-delivery"
+                    className="settings-select"
+                    value={appSettings.reviewDeliveryMode}
+                    onChange={(event) =>
+                      void onUpdateAppSettings({
+                        ...appSettings,
+                        reviewDeliveryMode:
+                          event.target.value as AppSettings["reviewDeliveryMode"],
+                      })
+                    }
+                  >
+                    <option value="inline">Inline (same thread)</option>
+                    <option value="detached">Detached (new review thread)</option>
+                  </select>
+                  <div className="settings-help">
+                    Choose whether <code>/review</code> runs in the current thread or a detached
+                    review thread.
+                  </div>
+                </div>
+
+                <div className="settings-field">
+                  <label className="settings-field-label" htmlFor="backend-mode">
+                    Backend mode
+                  </label>
+                  <select
+                    id="backend-mode"
+                    className="settings-select"
+                    value={appSettings.backendMode}
+                    onChange={(event) =>
+                      void onUpdateAppSettings({
+                        ...appSettings,
+                        backendMode: event.target.value as AppSettings["backendMode"],
+                      })
+                    }
+                  >
+                    <option value="local">Local (default)</option>
+                    <option value="remote">Remote (daemon)</option>
+                  </select>
+                  <div className="settings-help">
+                    Remote mode connects to a separate daemon running the backend on another machine (e.g. WSL2/Linux).
+                  </div>
+                </div>
+
+                {appSettings.backendMode === "remote" && (
+                  <div className="settings-field">
+                    <div className="settings-field-label">Remote backend</div>
+                    <div className="settings-field-row">
+                      <input
+                        className="settings-input settings-input--compact"
+                        value={remoteHostDraft}
+                        placeholder="127.0.0.1:4732"
+                        onChange={(event) => setRemoteHostDraft(event.target.value)}
+                        onBlur={() => {
+                          void handleCommitRemoteHost();
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            void handleCommitRemoteHost();
+                          }
+                        }}
+                        aria-label="Remote backend host"
+                      />
+                      <input
+                        type="password"
+                        className="settings-input settings-input--compact"
+                        value={remoteTokenDraft}
+                        placeholder="Token (optional)"
+                        onChange={(event) => setRemoteTokenDraft(event.target.value)}
+                        onBlur={() => {
+                          void handleCommitRemoteToken();
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            void handleCommitRemoteToken();
+                          }
+                        }}
+                        aria-label="Remote backend token"
+                      />
                     </div>
 
                     <div className="settings-field">
@@ -3862,15 +4298,15 @@ export function SettingsView({
 
               </section>
             )}
-            {activeSection === "experimental" && (
+            {activeSection === "features" && (
               <section className="settings-section">
-                <div className="settings-section-title">Experimental</div>
+                <div className="settings-section-title">Features</div>
                 <div className="settings-section-subtitle">
-                  Preview features that may change or be removed.
+                  Manage stable and experimental Codex features.
                 </div>
                 {hasGeminiHomeOverrides && (
                   <div className="settings-help">
-                    Experimental flags are stored in the default GEMINI_HOME config.toml.
+                    Feature settings are stored in the default CODEX_HOME config.toml.
                     <br />
                     Workspace overrides are not updated.
                   </div>
@@ -3879,16 +4315,114 @@ export function SettingsView({
                   <div>
                     <div className="settings-toggle-title">Config file</div>
                     <div className="settings-toggle-subtitle">
-                      Open the Gemini config in Finder.
+                      Open the Codex config in {fileManagerName()}.
                     </div>
                   </div>
                   <button type="button" className="ghost" onClick={handleOpenConfig}>
-                    Open in Finder
+                    {openInFileManagerLabel()}
                   </button>
                 </div>
                 {openConfigError && (
                   <div className="settings-help">{openConfigError}</div>
                 )}
+                <div className="settings-subsection-title">Stable Features</div>
+                <div className="settings-subsection-subtitle">
+                  Production-ready features enabled by default.
+                </div>
+                <div className="settings-toggle-row">
+                  <div>
+                    <div className="settings-toggle-title">Collaboration modes</div>
+                    <div className="settings-toggle-subtitle">
+                      Enable collaboration mode presets (Code, Plan).
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className={`settings-toggle ${
+                      appSettings.collaborationModesEnabled ? "on" : ""
+                    }`}
+                    onClick={() =>
+                      void onUpdateAppSettings({
+                        ...appSettings,
+                        collaborationModesEnabled:
+                          !appSettings.collaborationModesEnabled,
+                      })
+                    }
+                    aria-pressed={appSettings.collaborationModesEnabled}
+                  >
+                    <span className="settings-toggle-knob" />
+                  </button>
+                </div>
+                <div className="settings-toggle-row">
+                  <div>
+                    <div className="settings-toggle-title">Personality</div>
+                    <div className="settings-toggle-subtitle">
+                      Choose Codex communication style (writes top-level{" "}
+                      <code>personality</code> in config.toml).
+                    </div>
+                  </div>
+                  <select
+                    id="features-personality-select"
+                    className="settings-select"
+                    value={appSettings.personality}
+                    onChange={(event) =>
+                      void onUpdateAppSettings({
+                        ...appSettings,
+                        personality: event.target.value as AppSettings["personality"],
+                      })
+                    }
+                    aria-label="Personality"
+                  >
+                    <option value="friendly">Friendly</option>
+                    <option value="pragmatic">Pragmatic</option>
+                  </select>
+                </div>
+                <div className="settings-toggle-row">
+                  <div>
+                    <div className="settings-toggle-title">Steer mode</div>
+                    <div className="settings-toggle-subtitle">
+                      Send messages immediately. Use Tab to queue while a run is active.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className={`settings-toggle ${appSettings.steerEnabled ? "on" : ""}`}
+                    onClick={() =>
+                      void onUpdateAppSettings({
+                        ...appSettings,
+                        steerEnabled: !appSettings.steerEnabled,
+                      })
+                    }
+                    aria-pressed={appSettings.steerEnabled}
+                  >
+                    <span className="settings-toggle-knob" />
+                  </button>
+                </div>
+                <div className="settings-toggle-row">
+                  <div>
+                    <div className="settings-toggle-title">Background terminal</div>
+                    <div className="settings-toggle-subtitle">
+                      Run long-running terminal commands in the background.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className={`settings-toggle ${appSettings.unifiedExecEnabled ? "on" : ""}`}
+                    onClick={() =>
+                      void onUpdateAppSettings({
+                        ...appSettings,
+                        unifiedExecEnabled: !appSettings.unifiedExecEnabled,
+                      })
+                    }
+                    aria-pressed={appSettings.unifiedExecEnabled}
+                  >
+                    <span className="settings-toggle-knob" />
+                  </button>
+                </div>
+                <div className="settings-subsection-title">Experimental Features</div>
+                <div className="settings-subsection-subtitle">
+                  Preview features that may change or be removed.
+                </div>
                 <div className="settings-toggle-row">
                   <div>
                     <div className="settings-toggle-title">Multi-agent</div>
@@ -3912,66 +4446,21 @@ export function SettingsView({
                 </div>
                 <div className="settings-toggle-row">
                   <div>
-                    <div className="settings-toggle-title">Collaboration modes</div>
+                    <div className="settings-toggle-title">Apps</div>
                     <div className="settings-toggle-subtitle">
-                      Enable collaboration mode presets (Code, Plan).
+                      Enable ChatGPT apps/connectors and the <code>/apps</code> command.
                     </div>
                   </div>
                   <button
                     type="button"
-                    className={`settings-toggle ${
-                      appSettings.experimentalCollaborationModesEnabled ? "on" : ""
-                    }`}
+                    className={`settings-toggle ${appSettings.experimentalAppsEnabled ? "on" : ""}`}
                     onClick={() =>
                       void onUpdateAppSettings({
                         ...appSettings,
-                        experimentalCollaborationModesEnabled:
-                          !appSettings.experimentalCollaborationModesEnabled,
+                        experimentalAppsEnabled: !appSettings.experimentalAppsEnabled,
                       })
                     }
-                    aria-pressed={appSettings.experimentalCollaborationModesEnabled}
-                  >
-                    <span className="settings-toggle-knob" />
-                  </button>
-                </div>
-                <div className="settings-toggle-row">
-                  <div>
-                    <div className="settings-toggle-title">Background terminal</div>
-                    <div className="settings-toggle-subtitle">
-                      Run long-running terminal commands in the background.
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className={`settings-toggle ${appSettings.experimentalUnifiedExecEnabled ? "on" : ""}`}
-                    onClick={() =>
-                      void onUpdateAppSettings({
-                        ...appSettings,
-                        experimentalUnifiedExecEnabled: !appSettings.experimentalUnifiedExecEnabled,
-                      })
-                    }
-                    aria-pressed={appSettings.experimentalUnifiedExecEnabled}
-                  >
-                    <span className="settings-toggle-knob" />
-                  </button>
-                </div>
-                <div className="settings-toggle-row">
-                  <div>
-                    <div className="settings-toggle-title">Steer mode</div>
-                    <div className="settings-toggle-subtitle">
-                      Send messages immediately. Use Tab to queue while a run is active.
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className={`settings-toggle ${appSettings.experimentalSteerEnabled ? "on" : ""}`}
-                    onClick={() =>
-                      void onUpdateAppSettings({
-                        ...appSettings,
-                        experimentalSteerEnabled: !appSettings.experimentalSteerEnabled,
-                      })
-                    }
-                    aria-pressed={appSettings.experimentalSteerEnabled}
+                    aria-pressed={appSettings.experimentalAppsEnabled}
                   >
                     <span className="settings-toggle-knob" />
                   </button>
