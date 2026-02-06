@@ -44,15 +44,15 @@ export function AboutView() {
           <img
             className="about-icon"
             src="/app-icon.png"
-            alt="Codex Monitor icon"
+            alt="Agent Monitor icon"
           />
-          <div className="about-title">Codex Monitor</div>
+          <div className="about-title">Agent Monitor</div>
         </div>
         <div className="about-version">
           {version ? `Version ${version}` : "Version —"}
         </div>
         <div className="about-tagline">
-          Monitor the situation of your Codex agents
+          Monitor the situation of your AI agents
         </div>
         <div className="about-divider" />
         <div className="about-links">
