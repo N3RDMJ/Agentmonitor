@@ -24,7 +24,6 @@ All notable changes to this project are documented in this file.
 - Added first-class Playwright project wiring (`playwright.config.ts`, `npm run e2e`) for browser-based frontend smoke validation.
 - Added a Codex upstream parity CI guardrail (`npm run check:codex-parity`) to fail PRs when tracked Codex visual paths diverge from upstream.
 - Restored the shared Codex Rust core (`src-tauri/src/codex/*` and `src-tauri/src/shared/codex_core.rs`) to upstream parity and reintroduced `codex_aux_core` wiring needed by upstream Codex command flows.
-- Refreshed repository screenshots with new AgentMonitor captures (`screenshot.png` and `docs/assets/screenshot-settings.png`) instead of reused upstream images.
 
 ### Added
 - Added this root-level changelog to track ongoing work in canonical form.
