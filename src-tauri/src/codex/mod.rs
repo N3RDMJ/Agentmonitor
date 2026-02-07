@@ -489,7 +489,20 @@ pub(crate) async fn account_read(
         .await;
     }
 
-    codex_core::account_read_core(&state.sessions, &state.workspaces, workspace_id).await
+    let cli_type = state.app_settings.lock().await.cli_type.clone();
+    match cli_type {
+        crate::types::CliType::Claude => {
+            crate::shared::claude_core::account_read_core(
+                &state.sessions,
+                &state.workspaces,
+                workspace_id,
+            )
+            .await
+        }
+        _ => {
+            codex_core::account_read_core(&state.sessions, &state.workspaces, workspace_id).await
+        }
+    }
 }
 
 #[tauri::command]
@@ -652,7 +665,14 @@ pub(crate) async fn get_config_model(
         .await;
     }
 
-    codex_core::get_config_model_core(&state.workspaces, workspace_id).await
+    let cli_type = state.app_settings.lock().await.cli_type.clone();
+    match cli_type {
+        crate::types::CliType::Claude => {
+            crate::shared::claude_core::get_config_model_core(&state.workspaces, workspace_id)
+                .await
+        }
+        _ => codex_core::get_config_model_core(&state.workspaces, workspace_id).await,
+    }
 }
 
 /// Generates a commit message in the background without showing in the main chat

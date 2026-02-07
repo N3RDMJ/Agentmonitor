@@ -94,6 +94,8 @@ export const METHODS_ROUTED_IN_USE_APP_SERVER_EVENTS = [
   "account/login/completed",
   "account/rateLimits/updated",
   "account/updated",
+  "claude/backgroundThread",
+  "claude/connected",
   "codex/backgroundThread",
   "codex/connected",
   "error",
@@ -129,7 +131,7 @@ export function useAppServerEvents(handlers: AppServerEventHandlers) {
       }
       const params = getAppServerParams(payload);
 
-      if (method === "codex/connected") {
+      if (method === "codex/connected" || method === "claude/connected") {
         handlers.onWorkspaceConnected?.(workspace_id);
         return;
       }
@@ -239,7 +241,7 @@ export function useAppServerEvents(handlers: AppServerEventHandlers) {
         return;
       }
 
-      if (method === "codex/backgroundThread") {
+      if (method === "codex/backgroundThread" || method === "claude/backgroundThread") {
         const threadId = String(params.threadId ?? params.thread_id ?? "");
         const action = String(params.action ?? "hide");
         if (threadId) {

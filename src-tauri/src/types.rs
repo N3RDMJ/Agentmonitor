@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -320,6 +322,8 @@ pub(crate) struct OpenAppTarget {
 pub(crate) enum CliType {
     Codex,
     Claude,
+    Gemini,
+    Cursor,
 }
 
 impl Default for CliType {
@@ -333,6 +337,8 @@ impl std::fmt::Display for CliType {
         match self {
             CliType::Codex => write!(f, "codex"),
             CliType::Claude => write!(f, "claude"),
+            CliType::Gemini => write!(f, "gemini"),
+            CliType::Cursor => write!(f, "cursor"),
         }
     }
 }
@@ -544,6 +550,10 @@ pub(crate) struct AppSettings {
     pub(crate) open_app_targets: Vec<OpenAppTarget>,
     #[serde(default = "default_selected_open_app_id", rename = "selectedOpenAppId")]
     pub(crate) selected_open_app_id: String,
+    /// Preserve any frontend-only fields (e.g. geminiBin, cursorBin, cursorVimMode)
+    /// so they survive the Rust round-trip without data loss.
+    #[serde(flatten)]
+    pub(crate) extra: HashMap<String, serde_json::Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -1015,6 +1025,7 @@ impl Default for AppSettings {
             workspace_groups: default_workspace_groups(),
             open_app_targets: default_open_app_targets(),
             selected_open_app_id: default_selected_open_app_id(),
+            extra: HashMap::new(),
         }
     }
 }

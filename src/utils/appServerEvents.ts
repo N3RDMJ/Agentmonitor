@@ -4,6 +4,8 @@ export const SUPPORTED_APP_SERVER_METHODS = [
   "account/login/completed",
   "account/rateLimits/updated",
   "account/updated",
+  "claude/backgroundThread",
+  "claude/connected",
   "codex/backgroundThread",
   "codex/connected",
   "codex/event/skills_update_available",

@@ -1,14 +1,16 @@
 use std::path::{Path, PathBuf};
 
 use crate::files::io::read_text_file_within;
-use crate::files::policy::{policy_for, FileKind, FileScope};
+
+/// Claude Code stores its settings in `~/.claude/settings.json` (JSON format).
+const CLAUDE_SETTINGS_FILENAME: &str = "settings.json";
 
 /// Returns the path to the Claude config directory (e.g. ~/.claude).
 pub(crate) fn config_dir_path() -> Option<PathBuf> {
     resolve_default_claude_home()
 }
 
-/// Reads the model from the Claude config, if any.
+/// Reads the model from the Claude settings.json, if any.
 pub(crate) fn read_config_model(claude_home: Option<PathBuf>) -> Result<Option<String>, String> {
     let root = claude_home.or_else(resolve_default_claude_home);
     let Some(root) = root else {
@@ -21,19 +23,14 @@ fn resolve_default_claude_home() -> Option<PathBuf> {
     crate::claude::home::resolve_default_claude_home()
 }
 
-fn config_policy() -> Result<crate::files::policy::FilePolicy, String> {
-    policy_for(FileScope::Global, FileKind::Config)
-}
-
-fn read_config_contents_from_root(root: &Path) -> Result<Option<String>, String> {
-    let policy = config_policy()?;
+fn read_settings_contents_from_root(root: &Path) -> Result<Option<String>, String> {
     let response = read_text_file_within(
         root,
-        policy.filename,
-        policy.root_may_be_missing,
-        policy.root_context,
-        policy.filename,
-        policy.allow_external_symlink_target,
+        CLAUDE_SETTINGS_FILENAME,
+        true,                      // root_may_be_missing
+        "CLAUDE_CONFIG_DIR",       // root_context
+        CLAUDE_SETTINGS_FILENAME,  // filename context
+        false,                     // allow_external_symlink_target
     )?;
     if response.exists {
         Ok(Some(response.content))
@@ -43,7 +40,7 @@ fn read_config_contents_from_root(root: &Path) -> Result<Option<String>, String>
 }
 
 fn read_config_model_from_root(root: &Path) -> Result<Option<String>, String> {
-    let contents = read_config_contents_from_root(root)?;
+    let contents = read_settings_contents_from_root(root)?;
     Ok(contents.as_deref().and_then(parse_model_from_json))
 }
 
@@ -55,5 +52,35 @@ fn parse_model_from_json(contents: &str) -> Option<String> {
         None
     } else {
         Some(trimmed.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_model_from_json;
+
+    #[test]
+    fn parses_model_from_json_settings() {
+        let json = r#"{"model": "claude-sonnet-4-5-20250929"}"#;
+        assert_eq!(
+            parse_model_from_json(json),
+            Some("claude-sonnet-4-5-20250929".to_string())
+        );
+    }
+
+    #[test]
+    fn returns_none_for_empty_model() {
+        assert_eq!(parse_model_from_json(r#"{"model": ""}"#), None);
+        assert_eq!(parse_model_from_json(r#"{"model": "  "}"#), None);
+    }
+
+    #[test]
+    fn returns_none_for_missing_model() {
+        assert_eq!(parse_model_from_json(r#"{}"#), None);
+    }
+
+    #[test]
+    fn returns_none_for_invalid_json() {
+        assert_eq!(parse_model_from_json("not json"), None);
     }
 }
