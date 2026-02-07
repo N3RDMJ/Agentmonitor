@@ -2,6 +2,71 @@
 
 All docs must canonical, no past commentary, only live state.
 
+## Agent Memory (Project Scratchpad)
+
+Purpose: keep lightweight, durable project memory so agents avoid repeating mistakes and follow user/project preferences over time.
+
+### Memory Location (Repo Root)
+
+Store memory in the project root under `./memory/`:
+
+- `memory/decisions.md` — durable architecture/implementation decisions and conventions
+- `memory/mistakes.md` — mistakes, fixes, and prevention rules
+- `memory/todo.md` — open loops and follow-up tasks
+- `memory/context.md` — optional short-lived working context (can be compacted)
+
+### Automatic Write Rules
+
+Agents should append an entry when ANY of the following happens:
+
+1. User states a stable preference or rule ("do it this way").
+2. Agent makes a non-trivial mistake and corrects it.
+3. A decision is made that affects future implementation.
+4. A follow-up task is identified but not completed immediately.
+
+Do NOT write:
+- trivial chatter
+- transient debug noise
+- secrets/tokens/passwords
+- private data not required for project execution
+
+### Required Read Rules (Before Work)
+
+Before starting a task, agents must read:
+
+1. `memory/decisions.md`
+2. recent entries in `memory/mistakes.md`
+3. open items in `memory/todo.md`
+
+Then apply those constraints during planning and implementation.
+
+### Entry Format (Append-only)
+
+Use this compact format:
+
+```md
+## YYYY-MM-DD HH:mm
+Context: <task or feature>
+Type: decision | mistake | preference | todo
+Event: <what happened>
+Action: <what changed / fix applied>
+Rule: <one-line future behavior>
+```
+
+### Mistake Entry Requirements
+
+For entries in `memory/mistakes.md`, include:
+
+- `Root cause:`
+- `Fix applied:`
+- `Prevention rule:`
+
+### Maintenance
+
+- Keep memory append-only by default.
+- Compaction is allowed into summaries, but do not silently remove meaning.
+- Preserve recent detail (at least latest 30 days) before aggressive compaction.
+
 ## Project Summary
 CodexMonitor is a Tauri app that orchestrates Codex agents across local workspaces.
 
@@ -134,6 +199,76 @@ Keep `src/App.tsx` lean:
 - Keep it to wiring: hook composition, layout, and assembly.
 - Move stateful logic/effects into hooks under `src/features/app/hooks/`.
 - Keep Tauri IPC, menu listeners, and subscriptions out of `src/App.tsx`.
+
+### Design System Usage
+
+Use the design-system layer for shared UI shells and tokenized styling.
+
+- Primitive component locations:
+  - `src/features/design-system/components/modal/ModalShell.tsx`
+  - `src/features/design-system/components/toast/ToastPrimitives.tsx`
+  - `src/features/design-system/components/panel/PanelPrimitives.tsx`
+  - `src/features/design-system/components/popover/PopoverPrimitives.tsx`
+  - Toast sub-primitives: `ToastHeader`, `ToastActions`, `ToastError` (in `ToastPrimitives.tsx`)
+  - Panel sub-primitives: `PanelMeta`, `PanelSearchField` (in `PanelPrimitives.tsx`)
+  - Popover sub-primitives: `PopoverMenuItem` (in `PopoverPrimitives.tsx`)
+- Diff theming and style bridge:
+  - `src/features/design-system/diff/diffViewerTheme.ts`
+- DS token/style locations:
+  - `src/styles/ds-tokens.css`
+  - `src/styles/ds-modal.css`
+  - `src/styles/ds-toast.css`
+  - `src/styles/ds-panel.css`
+  - `src/styles/ds-popover.css`
+  - `src/styles/ds-diff.css`
+
+Naming conventions:
+
+- DS CSS classes use `.ds-*` prefixes.
+- DS CSS variables use `--ds-*` prefixes.
+- DS React primitives use `PascalCase` component names (`ModalShell`, `ToastCard`, `ToastHeader`, `ToastActions`, `ToastError`, `PanelFrame`, `PanelHeader`, `PanelMeta`, `PanelSearchField`, `PopoverSurface`, `PopoverMenuItem`).
+- Feature CSS should keep feature-prefixed classes (`.worktree-*`, `.update-*`) for content/layout specifics.
+
+Do:
+
+- Use DS primitives first for shared shells (modal wrappers, toast cards/viewports, panel shells/headers, popover/dropdown surfaces).
+- Pull shared visual tokens from `--ds-*` variables.
+- Keep feature styles focused on feature-specific layout/content, not duplicated shell chrome.
+- Centralize shared animation/chrome in DS stylesheets when used by multiple feature families.
+
+Don't:
+
+- Recreate fixed modal backdrops/cards in feature CSS when `ModalShell` is used.
+- Duplicate toast card chrome (background/border/shadow/padding/enter animation) per toast family.
+- Duplicate panel shell layout/header alignment in feature styles when `PanelFrame`/`PanelHeader` already provide it.
+- Recreate popover/dropdown shell chrome in feature CSS when `PopoverSurface`/`PopoverMenuItem` already provide it.
+- Add new non-DS color constants for shared shells; add/extend DS tokens instead.
+
+Migration guidance for new/updated components:
+
+1. Start by wrapping UI in the closest DS primitive.
+2. Migrate shared shell styles into DS CSS (`ds-*.css`) and delete redundant feature-level shell selectors.
+3. Keep only feature-local classes for spacing/content/interaction details.
+4. For legacy selectors that are still referenced, keep minimal compatibility aliases temporarily.
+5. Remove compatibility aliases once callsites reach zero, then rerun lint/typecheck/tests.
+
+Anti-duplication guidance:
+
+- Before adding shell styles, search for existing DS token/primitive coverage.
+- If two or more feature files need the same shell rule, move it to DS CSS immediately.
+- Prefer extending DS primitives/tokens over introducing another feature-specific wrapper class.
+- During refactors, remove unused legacy selectors once callsites are migrated.
+
+Enforcement workflow:
+
+- Lint guardrails for DS-targeted files live in `.eslintrc.cjs`.
+- Popover guardrails are enforced for migrated popover files (`MainHeader`, `Sidebar`, `SidebarHeader`, `SidebarCornerActions`, `OpenAppMenu`, `LaunchScript*`, `ComposerInput`, `FilePreviewPopover`, `WorkspaceHome`) to require `PopoverSurface`/`PopoverMenuItem`.
+- Codemod scripts live in `scripts/codemods/`:
+  - `modal-shell-codemod.mjs`
+  - `panel-shell-codemod.mjs`
+  - `toast-shell-codemod.mjs`
+- Run `npm run codemod:ds:dry` before UI shell migration PRs.
+- Keep `npm run lint:ds`/`npm run lint` green for modal/toast/panel/popover/diff files.
 
 ### Backend Guidelines
 

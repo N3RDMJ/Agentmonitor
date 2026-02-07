@@ -1,5 +1,11 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./styles/base.css";
+import "./styles/ds-tokens.css";
+import "./styles/ds-modal.css";
+import "./styles/ds-toast.css";
+import "./styles/ds-panel.css";
+import "./styles/ds-diff.css";
+import "./styles/ds-popover.css";
 import "./styles/buttons.css";
 import "./styles/sidebar.css";
 import "./styles/home.css";
@@ -1498,7 +1504,6 @@ function MainApp() {
     handleAddWorktreeAgent,
     handleAddCloneAgent,
   } = useWorkspaceActions({
-    activeWorkspace,
     isCompact,
     addWorkspace,
     addWorkspaceFromPath,
