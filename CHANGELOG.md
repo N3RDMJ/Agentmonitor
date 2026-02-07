@@ -5,6 +5,10 @@ All notable changes to this project are documented in this file.
 ## Unreleased
 
 ### Changed
+- Restored upstream CodexMonitor layout primitives and shell surfaces (`Sidebar`, `Home`, design-system modal/panel/popover/toast primitives, DS token imports) to recover visual/interaction parity for Codex paths.
+- Restored upstream modular settings architecture (`SettingsNav` + section components) and re-applied active-CLI backend mapping through `cliBackend` utilities so Codex UI remains upstream-parity while Claude/Gemini/Cursor settings persist correctly.
+- Reintroduced upstream Orbit/remote backend settings/invoke surfaces and default app-setting fields (`remoteBackendProvider`, Orbit URLs/runner/auth fields, Tailscale wrappers) to avoid feature regressions during parity restoration.
+- Normalized settings tests to upstream Codex display copy (`Show remaining Codex limits`) and resolved the remaining hook dependency lint warning in `SettingsView`.
 - Synced the app visual style layer with upstream CodexMonitor for transparency/glass and panel appearance parity (macOS glass-first behavior with existing platform-specific window config).
 - Updated user-facing naming across app UI and docs to use `Agent` terminology instead of `Codex` where possible.
 - Updated website/docs links and branding copy to point to the current `N3RDMJ/Agentmonitor` repository.

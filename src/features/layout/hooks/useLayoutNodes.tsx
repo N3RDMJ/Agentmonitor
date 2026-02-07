@@ -125,6 +125,7 @@ type LayoutNodesOptions = {
   onCancelSwitchAccount: () => void;
   accountSwitching: boolean;
   codeBlockCopyUseModifier: boolean;
+  showMessageFilePath?: boolean;
   openAppTargets: OpenAppTarget[];
   openAppIconById: Record<string, string>;
   selectedOpenAppId: string;
