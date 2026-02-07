@@ -1,0 +1,6 @@
+{
+  "upstreamRepo": "https://github.com/Dimillian/CodexMonitor.git",
+  "upstreamRef": "main",
+  "pathSpecs": ["src/styles"],
+  "allowDiffPaths": []
+}

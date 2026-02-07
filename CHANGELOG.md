@@ -22,6 +22,7 @@ All notable changes to this project are documented in this file.
 - Renamed settings doctor prop/type surfaces to neutral agent naming (`onRunAgentDoctor`, `AgentDoctorResult`) while preserving `CodexDoctorResult` as a compatibility alias.
 - Workspace home/args overrides are now CLI-specific (`codex*`, `gemini*`, `cursor*`, `claude*`) for active-CLI session resolution, with legacy fallback to `codexHome/codexArgs` for backward compatibility.
 - Added first-class Playwright project wiring (`playwright.config.ts`, `npm run e2e`) for browser-based frontend smoke validation.
+- Added a Codex upstream parity CI guardrail (`npm run check:codex-parity`) to fail PRs when tracked Codex visual paths diverge from upstream.
 
 ### Added
 - Added this root-level changelog to track ongoing work in canonical form.
@@ -35,3 +36,4 @@ All notable changes to this project are documented in this file.
 - Added frontend settings coverage for Claude-specific workspace args/home override updates.
 - Added Playwright smoke coverage for opening Settings and verifying the CLI Backend section with a minimal Tauri runtime mock.
 - Added Playwright Claude-focused coverage for persisting default CLI path/args and workspace Claude binary/home/args overrides.
+- Added Codex-focused Playwright golden coverage for default Codex CLI persistence and workspace Codex override persistence.
