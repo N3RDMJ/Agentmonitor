@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useReducer, useRef } from "react";
 import type {
+  CliCapabilities,
   CliType,
   CustomPromptOption,
   DebugEntry,
@@ -36,6 +37,7 @@ type UseThreadsOptions = {
   customPrompts?: CustomPromptOption[];
   onMessageActivity?: () => void;
   threadSortKey?: ThreadListSortKey;
+  cliCapabilities?: CliCapabilities;
 };
 
 export function useThreads({
@@ -52,6 +54,7 @@ export function useThreads({
   customPrompts = [],
   onMessageActivity,
   threadSortKey = "updated_at",
+  cliCapabilities,
 }: UseThreadsOptions) {
   const [state, dispatch] = useReducer(threadReducer, initialState);
   const loadedThreadsRef = useRef<Record<string, boolean>>({});
@@ -60,8 +63,9 @@ export function useThreads({
   const planByThreadRef = useRef(state.planByThread);
   const detachedReviewNoticeRef = useRef<Set<string>>(new Set());
   planByThreadRef.current = state.planByThread;
+  const approvalsEnabled = cliCapabilities?.supportsApprovals ?? true;
   const { approvalAllowlistRef, handleApprovalDecision, handleApprovalRemember } =
-    useThreadApprovals({ dispatch, onDebug });
+    useThreadApprovals({ dispatch, onDebug, approvalsEnabled });
   const { handleUserInputSubmit } = useThreadUserInput({ dispatch });
   const {
     customNamesRef,
@@ -219,6 +223,7 @@ export function useThreads({
     onReviewExited: handleReviewExited,
     approvalAllowlistRef,
     pendingInterruptsRef,
+    approvalsEnabled,
   });
 
   const handleAccountLoginCompleted = useCallback(
@@ -359,6 +364,7 @@ export function useThreads({
     reviewDeliveryMode,
     steerEnabled,
     customPrompts,
+    cliCapabilities,
     threadStatusById: state.threadStatusById,
     activeTurnIdByThread: state.activeTurnIdByThread,
     rateLimitsByWorkspace: state.rateLimitsByWorkspace,
