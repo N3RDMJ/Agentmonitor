@@ -5,6 +5,7 @@ All notable changes to this project are documented in this file.
 ## Unreleased
 
 ### Changed
+- Bumped app release version metadata to `0.8.0` for a full cross-platform test release pass before the next real production cut.
 - Rewrote `README.md` to reflect current live product state: multi-CLI support, full vs compatible capability tiers, PTY sidecar fallback behavior, current build/validation commands, and updated architecture/persistence notes.
 - Added a non-terminal agent profile switch flow in Settings: users can select a workspace profile and apply it directly from the UI, with automatic `CLAUDE.md` targeting for Claude Code and `AGENTS.md` targeting for other CLIs.
 - Home dashboard title now uses `Agent Monitor` branding instead of `Codex Monitor`.
