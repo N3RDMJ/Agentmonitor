@@ -22,6 +22,11 @@ export function useThreadApprovalEvents({
   return useCallback(
     (approval: ApprovalRequest) => {
       if (!approvalsEnabled) {
+        void respondToServerRequest(
+          approval.workspace_id,
+          approval.request_id,
+          "decline",
+        );
         return;
       }
       const commandInfo = getApprovalCommandInfo(approval.params ?? {});

@@ -42,14 +42,6 @@ export function useThreadApprovals({
 
   const handleApprovalDecision = useCallback(
     async (request: ApprovalRequest, decision: "accept" | "decline") => {
-      if (!approvalsEnabled) {
-        dispatch({
-          type: "removeApproval",
-          requestId: request.request_id,
-          workspaceId: request.workspace_id,
-        });
-        return;
-      }
       await respondToServerRequest(
         request.workspace_id,
         request.request_id,
@@ -61,12 +53,17 @@ export function useThreadApprovals({
         workspaceId: request.workspace_id,
       });
     },
-    [approvalsEnabled, dispatch],
+    [dispatch],
   );
 
   const handleApprovalRemember = useCallback(
     async (request: ApprovalRequest, command: string[]) => {
       if (!approvalsEnabled) {
+        await respondToServerRequest(
+          request.workspace_id,
+          request.request_id,
+          "accept",
+        );
         dispatch({
           type: "removeApproval",
           requestId: request.request_id,
