@@ -91,20 +91,20 @@ jobs:
           set -euo pipefail
           mkdir -p tap/Casks
           cat > tap/Casks/agent-monitor.rb <<EOF
-cask "agent-monitor" do
-  version "${VERSION}"
-  sha256 arm: "${SHA256_ARM64}"
+          cask "agent-monitor" do
+            version "${VERSION}"
+            sha256 arm: "${SHA256_ARM64}"
 
-  url "https://github.com/${APP_REPO}/releases/download/v#{version}/${DMG_NAME}",
-      verified: "github.com/${APP_REPO}/"
-  name "Agent Monitor"
-  desc "Desktop app that orchestrates coding agents across local workspaces"
-  homepage "https://github.com/${APP_REPO}"
-  depends_on arch: :arm64
+            url "https://github.com/${APP_REPO}/releases/download/v#{version}/${DMG_NAME}",
+                verified: "github.com/${APP_REPO}/"
+            name "Agent Monitor"
+            desc "Desktop app that orchestrates coding agents across local workspaces"
+            homepage "https://github.com/${APP_REPO}"
+            depends_on arch: :arm64
 
-  app "Agent Monitor.app"
-end
-EOF
+            app "Agent Monitor.app"
+          end
+          EOF
 
       - name: Commit and push tap update
         working-directory: tap
