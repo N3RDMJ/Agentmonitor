@@ -5,6 +5,7 @@ All notable changes to this project are documented in this file.
 ## Unreleased
 
 ### Changed
+- Added a non-terminal agent profile switch flow in Settings: users can select a workspace profile and apply it directly from the UI, with automatic `CLAUDE.md` targeting for Claude Code and `AGENTS.md` targeting for other CLIs.
 - Home dashboard title now uses `Agent Monitor` branding instead of `Codex Monitor`.
 - Home usage dashboard now supports a CLI filter (`All CLIs`, `Codex`, `Claude Code`, `Gemini CLI`, `Cursor CLI`) and refreshes metrics for the selected CLI scope.
 - Local usage backend snapshot command now accepts an optional CLI filter and classifies usage by model family so dashboard metrics can be scoped to a selected CLI.
@@ -39,6 +40,7 @@ All notable changes to this project are documented in this file.
 - Extended capability gating into thread/runtime flows so compatible CLIs suppress approval surfaces and unsupported interrupt/apps/MCP actions gracefully instead of exposing full-mode controls.
 
 ### Added
+- Added backend `agent_profiles_list` and `agent_profile_apply` command surfaces (app + daemon + shared core) to discover `profiles/*` entries and apply profile files with symlink-first auto fallback to copy mode.
 - Added this root-level changelog to track ongoing work in canonical form.
 - Added backend tests for active-CLI argument and binary resolution, plus frontend coverage for Claude Code CLI settings persistence.
 - Added backend coverage for active-CLI doctor default resolution and frontend coverage for Claude-mode doctor invocation.

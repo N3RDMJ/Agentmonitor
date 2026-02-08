@@ -69,6 +69,30 @@ export type WorkspaceInfo = {
   settings: WorkspaceSettings;
 };
 
+export type AgentProfileMode = "symlink" | "copy";
+export type AgentProfileApplyMode = "auto" | "symlink" | "copy";
+
+export type AgentProfile = {
+  name: string;
+  label: string;
+  hasAgents: boolean;
+  hasClaude: boolean;
+};
+
+export type AgentProfileListResponse = {
+  profiles: AgentProfile[];
+  activeProfile: string | null;
+  targetFile: "AGENTS.md" | "CLAUDE.md";
+  activeMode: AgentProfileMode | null;
+};
+
+export type AgentProfileApplyResponse = {
+  activeProfile: string;
+  targetFile: "AGENTS.md" | "CLAUDE.md";
+  activeMode: AgentProfileMode;
+  fallbackUsed: boolean;
+};
+
 export type AppServerEvent = {
   workspace_id: string;
   message: Record<string, unknown>;

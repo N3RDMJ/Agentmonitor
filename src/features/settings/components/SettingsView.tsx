@@ -3,6 +3,8 @@ import { ask, open } from "@tauri-apps/plugin-dialog";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import X from "lucide-react/dist/esm/icons/x";
 import type {
+  AgentProfile,
+  AgentProfileApplyMode,
   AppSettings,
   CodexDoctorResult,
   DictationModelStatus,
@@ -19,6 +21,8 @@ import type {
 } from "../../../types";
 import {
   getCodexConfigPath,
+  applyAgentProfile,
+  listAgentProfiles,
   orbitConnectTest,
   orbitRunnerStart,
   orbitRunnerStatus,
@@ -139,6 +143,11 @@ const normalizeOverrideValue = (value: string): string | null => {
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
 };
+
+const profileSupportsTargetFile = (
+  profile: AgentProfile,
+  targetFile: "AGENTS.md" | "CLAUDE.md",
+) => (targetFile === "CLAUDE.md" ? profile.hasClaude : profile.hasAgents);
 
 const normalizeWorktreeSetupScript = (
   value: string | null | undefined,
@@ -392,6 +401,21 @@ export function SettingsView({
   const [codexArgsDraft, setCodexArgsDraft] = useState(
     getActiveCliArgs(appSettings) ?? "",
   );
+  const [agentProfilesWorkspaceId, setAgentProfilesWorkspaceId] = useState<string | null>(
+    null,
+  );
+  const [agentProfiles, setAgentProfiles] = useState<AgentProfile[]>([]);
+  const [selectedAgentProfile, setSelectedAgentProfile] = useState("");
+  const [activeAgentProfile, setActiveAgentProfile] = useState<string | null>(null);
+  const [activeAgentProfileMode, setActiveAgentProfileMode] = useState<
+    "symlink" | "copy" | null
+  >(null);
+  const [agentProfileTargetFile, setAgentProfileTargetFile] = useState<
+    "AGENTS.md" | "CLAUDE.md"
+  >("AGENTS.md");
+  const [agentProfilesLoading, setAgentProfilesLoading] = useState(false);
+  const [agentProfilesApplying, setAgentProfilesApplying] = useState(false);
+  const [agentProfilesError, setAgentProfilesError] = useState<string | null>(null);
   const [remoteHostDraft, setRemoteHostDraft] = useState(appSettings.remoteBackendHost);
   const [remoteTokenDraft, setRemoteTokenDraft] = useState(appSettings.remoteBackendToken ?? "");
   const [orbitWsUrlDraft, setOrbitWsUrlDraft] = useState(appSettings.orbitWsUrl ?? "");
@@ -556,6 +580,14 @@ export function SettingsView({
     () => projects.filter((workspace) => (workspace.kind ?? "main") !== "worktree"),
     [projects],
   );
+  const agentProfilesWorkspacePath = useMemo(() => {
+    if (!agentProfilesWorkspaceId) {
+      return null;
+    }
+    return (
+      projects.find((workspace) => workspace.id === agentProfilesWorkspaceId)?.path ?? null
+    );
+  }, [agentProfilesWorkspaceId, projects]);
   const environmentWorkspace = useMemo(() => {
     if (mainWorkspaces.length === 0) {
       return null;
@@ -760,6 +792,104 @@ export function SettingsView({
       setActiveSection(initialSection);
     }
   }, [initialSection]);
+
+  useEffect(() => {
+    if (mainWorkspaces.length === 0) {
+      setAgentProfilesWorkspaceId(null);
+      return;
+    }
+    if (agentProfilesWorkspaceId) {
+      const exists = mainWorkspaces.some((workspace) => workspace.id === agentProfilesWorkspaceId);
+      if (exists) {
+        return;
+      }
+    }
+    setAgentProfilesWorkspaceId(mainWorkspaces[0]?.id ?? null);
+  }, [agentProfilesWorkspaceId, mainWorkspaces]);
+
+  const handleRefreshAgentProfiles = useCallback(() => {
+    if (!agentProfilesWorkspaceId) {
+      setAgentProfiles([]);
+      setSelectedAgentProfile("");
+      setActiveAgentProfile(null);
+      setActiveAgentProfileMode(null);
+      setAgentProfilesError("Select a workspace to load profiles.");
+      return;
+    }
+    void (async () => {
+      setAgentProfilesLoading(true);
+      setAgentProfilesError(null);
+      try {
+        const response = await listAgentProfiles(agentProfilesWorkspaceId);
+        const supportedProfiles = response.profiles.filter((profile) =>
+          profileSupportsTargetFile(profile, response.targetFile),
+        );
+        setAgentProfiles(supportedProfiles);
+        setAgentProfileTargetFile(response.targetFile);
+        setActiveAgentProfile(response.activeProfile);
+        setActiveAgentProfileMode(response.activeMode);
+        setSelectedAgentProfile((previous) => {
+          if (previous && supportedProfiles.some((profile) => profile.name === previous)) {
+            return previous;
+          }
+          if (
+            response.activeProfile &&
+            supportedProfiles.some((profile) => profile.name === response.activeProfile)
+          ) {
+            return response.activeProfile;
+          }
+          return supportedProfiles[0]?.name ?? "";
+        });
+      } catch (error) {
+        setAgentProfiles([]);
+        setSelectedAgentProfile("");
+        setActiveAgentProfile(null);
+        setActiveAgentProfileMode(null);
+        setAgentProfilesError(
+          error instanceof Error ? error.message : "Unable to load agent profiles.",
+        );
+      } finally {
+        setAgentProfilesLoading(false);
+      }
+    })();
+  }, [agentProfilesWorkspaceId]);
+
+  useEffect(() => {
+    handleRefreshAgentProfiles();
+  }, [handleRefreshAgentProfiles, appSettings.cliType]);
+
+  const handleApplyAgentProfile = useCallback(
+    (mode: AgentProfileApplyMode = "auto") => {
+      if (!agentProfilesWorkspaceId || !selectedAgentProfile) {
+        return;
+      }
+      void (async () => {
+        setAgentProfilesApplying(true);
+        setAgentProfilesError(null);
+        try {
+          const result = await applyAgentProfile(
+            agentProfilesWorkspaceId,
+            selectedAgentProfile,
+            mode,
+          );
+          setActiveAgentProfile(result.activeProfile);
+          setActiveAgentProfileMode(result.activeMode);
+          setAgentProfileTargetFile(result.targetFile);
+          if (result.fallbackUsed) {
+            setAgentProfilesError("Symlink unavailable; switched using copy fallback.");
+          }
+          handleRefreshAgentProfiles();
+        } catch (error) {
+          setAgentProfilesError(
+            error instanceof Error ? error.message : "Unable to apply selected profile.",
+          );
+        } finally {
+          setAgentProfilesApplying(false);
+        }
+      })();
+    },
+    [agentProfilesWorkspaceId, handleRefreshAgentProfiles, selectedAgentProfile],
+  );
 
   useEffect(() => {
     if (!environmentWorkspace) {
@@ -1775,6 +1905,20 @@ export function SettingsView({
               }}
               onUpdateWorkspaceCodexBin={onUpdateWorkspaceCodexBin}
               onUpdateWorkspaceSettings={onUpdateWorkspaceSettings}
+              agentProfilesWorkspaceId={agentProfilesWorkspaceId}
+              agentProfilesWorkspacePath={agentProfilesWorkspacePath}
+              agentProfilesLoading={agentProfilesLoading}
+              agentProfilesApplying={agentProfilesApplying}
+              agentProfilesError={agentProfilesError}
+              agentProfiles={agentProfiles}
+              activeAgentProfile={activeAgentProfile}
+              activeAgentProfileMode={activeAgentProfileMode}
+              agentProfileTargetFile={agentProfileTargetFile}
+              selectedAgentProfile={selectedAgentProfile}
+              onSetAgentProfilesWorkspaceId={setAgentProfilesWorkspaceId}
+              onSetSelectedAgentProfile={setSelectedAgentProfile}
+              onRefreshAgentProfiles={handleRefreshAgentProfiles}
+              onApplyAgentProfile={handleApplyAgentProfile}
             />
           )}
           {activeSection === "features" && (

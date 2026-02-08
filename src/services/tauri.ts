@@ -2,6 +2,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { Options as NotificationOptions } from "@tauri-apps/plugin-notification";
 import type {
+  AgentProfileApplyMode,
+  AgentProfileApplyResponse,
+  AgentProfileListResponse,
   AgentDoctorResult,
   AppSettings,
   DictationModelStatus,
@@ -688,6 +691,24 @@ export async function readAgentMd(workspaceId: string): Promise<AgentMdResponse>
 
 export async function writeAgentMd(workspaceId: string, content: string): Promise<void> {
   return fileWrite("workspace", "agents", content, workspaceId);
+}
+
+export async function listAgentProfiles(
+  workspaceId: string,
+): Promise<AgentProfileListResponse> {
+  return invoke<AgentProfileListResponse>("agent_profiles_list", { workspaceId });
+}
+
+export async function applyAgentProfile(
+  workspaceId: string,
+  profile: string,
+  mode: AgentProfileApplyMode = "auto",
+): Promise<AgentProfileApplyResponse> {
+  return invoke<AgentProfileApplyResponse>("agent_profile_apply", {
+    workspaceId,
+    profile,
+    mode,
+  });
 }
 
 export async function listGitBranches(workspaceId: string) {
