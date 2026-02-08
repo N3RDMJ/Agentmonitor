@@ -10,7 +10,7 @@
   --terminal-background: var(--surface-debug);
   --terminal-foreground: var(--text-stronger);
   --terminal-cursor: var(--text-stronger);
-  --terminal-selection: rgba(100, 200, 255, 0.25);
+  --terminal-selection: rgba(200, 255, 0, 0.18);
   --terminal-font-family: var(--code-font-family);
 }
 

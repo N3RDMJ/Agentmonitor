@@ -14,13 +14,13 @@
   --surface-control-hover: rgba(255, 255, 255, 0.16);
   --surface-control-disabled: rgba(255, 255, 255, 0.06);
   --surface-hover: rgba(255, 255, 255, 0.06);
-  --surface-active: rgba(120, 205, 255, 0.18);
+  --surface-active: rgba(200, 255, 0, 0.11);
   --surface-approval: rgba(32, 35, 42, 0.8);
   --surface-debug: rgba(32, 35, 42, 0.8);
   --surface-command: rgba(32, 35, 42, 0.9);
   --surface-diff-card: rgba(32, 35, 42, 0.55);
   --surface-bubble: rgba(255, 255, 255, 0.14);
-  --surface-bubble-user: rgba(77, 153, 255, 0.5);
+  --surface-bubble-user: rgba(200, 255, 0, 0.25);
   --surface-context-core: rgba(32, 35, 42, 0.92);
   --surface-popover: rgba(32, 35, 42, 0.98);
 }
@@ -40,13 +40,13 @@
   --surface-control-hover: rgba(78, 84, 96, 0.84);
   --surface-control-disabled: rgba(68, 72, 84, 0.6);
   --surface-hover: rgba(74, 80, 92, 0.78);
-  --surface-active: rgba(120, 205, 255, 0.22);
+  --surface-active: rgba(200, 255, 0, 0.14);
   --surface-approval: rgba(32, 35, 42, 0.96);
   --surface-debug: rgba(32, 35, 42, 0.96);
   --surface-command: rgba(32, 35, 42, 0.98);
   --surface-diff-card: rgba(32, 35, 42, 0.94);
   --surface-bubble: rgba(70, 75, 88, 0.92);
-  --surface-bubble-user: rgba(77, 153, 255, 0.58);
+  --surface-bubble-user: rgba(200, 255, 0, 0.30);
   --surface-context-core: rgba(32, 35, 42, 0.98);
   --surface-popover: rgba(32, 35, 42, 0.995);
 }

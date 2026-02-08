@@ -221,7 +221,7 @@
 
 .settings-download-fill {
   height: 100%;
-  background: linear-gradient(90deg, rgba(100, 200, 255, 0.7), rgba(120, 235, 190, 0.8));
+  background: linear-gradient(90deg, rgba(200, 255, 0, 0.7), rgba(180, 230, 0, 0.55));
 }
 
 .settings-download-meta {
@@ -655,7 +655,7 @@
 }
 
 .settings-doctor.ok {
-  border-color: rgba(120, 235, 190, 0.4);
+  border-color: rgba(200, 255, 0, 0.35);
   color: var(--text-strong);
 }
 
@@ -738,7 +738,7 @@
 }
 
 .settings-toggle.on {
-  background: linear-gradient(135deg, rgba(100, 200, 255, 0.6), rgba(120, 235, 190, 0.6));
+  background: linear-gradient(135deg, rgba(200, 255, 0, 0.5), rgba(180, 230, 0, 0.4));
   border-color: var(--border-accent);
   justify-content: flex-end;
 }

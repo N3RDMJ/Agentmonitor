@@ -444,7 +444,7 @@
   padding: 14px 14px 16px;
   border-radius: 16px;
   background:
-    linear-gradient(135deg, rgba(100, 200, 255, 0.12), transparent 60%),
+    linear-gradient(135deg, rgba(200, 255, 0, 0.08), transparent 60%),
     var(--surface-card);
   border: 1px solid var(--border-subtle);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);

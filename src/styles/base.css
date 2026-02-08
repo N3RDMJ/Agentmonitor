@@ -15,13 +15,13 @@
   --surface-control-hover: rgba(54, 60, 72, 0.8);
   --surface-control-disabled: rgba(40, 44, 55, 0.5);
   --surface-hover: rgba(46, 50, 62, 0.7);
-  --surface-active: rgba(100, 200, 255, 0.18);
+  --surface-active: rgba(200, 255, 0, 0.10);
   --surface-approval: rgba(12, 16, 26, 0.92);
   --surface-debug: rgba(12, 16, 26, 0.92);
   --surface-command: rgba(12, 14, 20, 0.95);
   --surface-diff-card: rgba(14, 18, 28, 0.9);
   --surface-bubble: rgba(42, 46, 58, 0.9);
-  --surface-bubble-user: rgba(77, 153, 255, 0.55);
+  --surface-bubble-user: rgba(200, 255, 0, 0.25);
   --surface-context-core: rgba(16, 20, 30, 0.96);
   --surface-popover: rgba(16, 20, 30, 0.995);
 }

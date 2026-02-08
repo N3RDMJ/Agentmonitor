@@ -281,12 +281,12 @@
 }
 
 .composer-action--mic.is-active {
-  border-color: rgba(120, 235, 190, 0.6);
-  background: rgba(120, 235, 190, 0.12);
+  border-color: rgba(200, 255, 0, 0.45);
+  background: rgba(200, 255, 0, 0.08);
 }
 
 .composer-action--mic.is-active:hover {
-  background: rgba(120, 235, 190, 0.18);
+  background: rgba(200, 255, 0, 0.12);
 }
 
 .composer-action--mic.is-processing {
@@ -310,8 +310,8 @@
 .composer-waveform.is-processing {
   background: linear-gradient(
     90deg,
-    rgba(100, 200, 255, 0.15),
-    rgba(120, 235, 190, 0.15)
+    rgba(200, 255, 0, 0.10),
+    rgba(180, 230, 0, 0.08)
   );
 }
 
