@@ -5,6 +5,7 @@ All notable changes to this project are documented in this file.
 ## Unreleased
 
 ### Changed
+- Composer drag-and-drop now inserts dropped non-image file/folder paths into the draft text while still attaching dropped images to message context.
 - Cursor CLI output format default is now `stream-json` (backend + settings fallback defaults) instead of `text` for new/legacy settings without an explicit Cursor format.
 - Release `latest.json` generation now points updater asset URLs at `N3RDMJ/Agentmonitor` instead of `Dimillian/CodexMonitor`.
 - Codex parity guardrails now explicitly allow fork-specific style divergences in `src/styles/sidebar.css` and `src/styles/mobile-setup-wizard.css`, preventing unrelated release PRs from failing parity CI.

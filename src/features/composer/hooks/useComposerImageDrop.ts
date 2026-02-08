@@ -70,15 +70,37 @@ function normalizeDragPosition(
 type UseComposerImageDropArgs = {
   disabled: boolean;
   onAttachImages?: (paths: string[]) => void;
+  onInsertPaths?: (paths: string[]) => void;
 };
+
+function uniquePaths(paths: string[]) {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const path of paths) {
+    if (seen.has(path)) {
+      continue;
+    }
+    seen.add(path);
+    result.push(path);
+  }
+  return result;
+}
 
 export function useComposerImageDrop({
   disabled,
   onAttachImages,
+  onInsertPaths,
 }: UseComposerImageDropArgs) {
   const [isDragOver, setIsDragOver] = useState(false);
   const dropTargetRef = useRef<HTMLDivElement | null>(null);
   const lastClientPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const onAttachImagesRef = useRef<typeof onAttachImages>(onAttachImages);
+  const onInsertPathsRef = useRef<typeof onInsertPaths>(onInsertPaths);
+
+  useEffect(() => {
+    onAttachImagesRef.current = onAttachImages;
+    onInsertPathsRef.current = onInsertPaths;
+  }, [onAttachImages, onInsertPaths]);
 
   useEffect(() => {
     let unlisten: (() => void) | null = null;
@@ -112,12 +134,18 @@ export function useComposerImageDrop({
         if (!isInside) {
           return;
         }
-        const imagePaths = (event.payload.paths ?? [])
+        const paths = uniquePaths(
+          (event.payload.paths ?? [])
           .map((path) => path.trim())
           .filter(Boolean)
-          .filter(isImagePath);
+        );
+        const imagePaths = paths.filter(isImagePath);
+        const nonImagePaths = paths.filter((path) => !isImagePath(path));
         if (imagePaths.length > 0) {
-          onAttachImages?.(imagePaths);
+          onAttachImagesRef.current?.(imagePaths);
+        }
+        if (nonImagePaths.length > 0) {
+          onInsertPathsRef.current?.(nonImagePaths);
         }
       }
     });
@@ -126,7 +154,7 @@ export function useComposerImageDrop({
         unlisten();
       }
     };
-  }, [disabled, onAttachImages]);
+  }, [disabled]);
 
   const handleDragOver = (event: React.DragEvent<HTMLElement>) => {
     if (disabled) {
@@ -163,12 +191,20 @@ export function useComposerImageDrop({
       .filter((item) => item.kind === "file")
       .map((item) => item.getAsFile())
       .filter((file): file is File => Boolean(file));
-    const filePaths = [...files, ...itemFiles]
+    const filePaths = uniquePaths(
+      [...files, ...itemFiles]
       .map((file) => (file as File & { path?: string }).path ?? "")
-      .filter(Boolean);
+      .filter(Boolean),
+    );
     const imagePaths = filePaths.filter(isImagePath);
+    const nonImagePaths = filePaths.filter((path) => !isImagePath(path));
     if (imagePaths.length > 0) {
-      onAttachImages?.(imagePaths);
+      onAttachImagesRef.current?.(imagePaths);
+    }
+    if (nonImagePaths.length > 0) {
+      onInsertPathsRef.current?.(nonImagePaths);
+    }
+    if (filePaths.length > 0) {
       return;
     }
     const fileImages = [...files, ...itemFiles].filter((file) =>
@@ -213,7 +249,7 @@ export function useComposerImageDrop({
     );
     const valid = dataUrls.filter(Boolean);
     if (valid.length > 0) {
-      onAttachImages?.(valid);
+      onAttachImagesRef.current?.(valid);
     }
   };
 

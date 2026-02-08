@@ -200,6 +200,24 @@ export function ComposerInput({
   } = useComposerImageDrop({
     disabled,
     onAttachImages,
+    onInsertPaths: (paths) => {
+      if (paths.length === 0) {
+        return;
+      }
+      const textarea = textareaRef.current;
+      const start = textarea?.selectionStart ?? text.length;
+      const end = textarea?.selectionEnd ?? start;
+      const before = text.slice(0, start);
+      const after = text.slice(end);
+      const pathBlock = paths.join("\n");
+      const needsLeadingBreak = before.length > 0 && !before.endsWith("\n");
+      const needsTrailingBreak = after.length > 0 && !after.startsWith("\n");
+      const inserted = `${needsLeadingBreak ? "\n" : ""}${pathBlock}${
+        needsTrailingBreak ? "\n" : ""
+      }`;
+      const next = `${before}${inserted}${after}`;
+      onTextChange(next, before.length + inserted.length);
+    },
   });
 
   useEffect(() => {
