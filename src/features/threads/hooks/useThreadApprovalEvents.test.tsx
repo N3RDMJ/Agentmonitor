@@ -83,7 +83,7 @@ describe("useThreadApprovalEvents", () => {
     expect(dispatch).toHaveBeenCalledWith({ type: "addApproval", approval });
   });
 
-  it("ignores approvals when approvals are disabled", () => {
+  it("auto-declines approvals when approvals are disabled", () => {
     const dispatch = vi.fn();
     const approvalAllowlistRef = {
       current: { "ws-1": [["git", "status"]] },
@@ -103,7 +103,7 @@ describe("useThreadApprovalEvents", () => {
       result.current(approval);
     });
 
-    expect(respondToServerRequest).not.toHaveBeenCalled();
+    expect(respondToServerRequest).toHaveBeenCalledWith("ws-1", 9, "decline");
     expect(dispatch).not.toHaveBeenCalled();
   });
 });

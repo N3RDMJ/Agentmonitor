@@ -28,7 +28,7 @@ use crate::backend::app_server::WorkspaceSession;
 use crate::codex::spawn_workspace_session;
 use crate::git_utils::resolve_git_root;
 use crate::remote_backend;
-use crate::shared::process_core::{kill_child_process_tree, tokio_command};
+use crate::shared::process_core::tokio_command;
 #[cfg(target_os = "windows")]
 use crate::shared::process_core::{build_cmd_c_command, resolve_windows_executable};
 use crate::shared::workspaces_core;
@@ -265,8 +265,7 @@ pub(crate) async fn add_clone(
             let mut workspaces = state.workspaces.lock().await;
             workspaces.remove(&entry.id);
         }
-        let mut child = session.child.lock().await;
-        kill_child_process_tree(&mut child).await;
+        session.terminate_process().await;
         let _ = tokio::fs::remove_dir_all(&destination_path).await;
         return Err(error);
     }
