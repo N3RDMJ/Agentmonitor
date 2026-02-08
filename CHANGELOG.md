@@ -5,6 +5,8 @@ All notable changes to this project are documented in this file.
 ## Unreleased
 
 ### Changed
+- Workspace connect now auto-attempts sandbox bootstrap for the active CLI: Codex/Claude project MCP registration (`gondolin` via `npx @earendil-works/gondolin mcp`) and Gemini settings upsert, so sandbox tooling is available without separate Gondolin install steps.
+- Added `sandboxBootstrapEnabled` app setting (default `true`) and a Features toggle (`Sandbox bootstrap`) so users can opt out of automatic sandbox setup.
 - Fixed `homebrew-tap.yml` YAML parsing by indenting the embedded cask heredoc under the `run: |` block, resolving the workflow syntax error reported at line 94.
 - Added compact support for Claude Code mode by routing `/compact` to a regular user command message path instead of Codex-only `compact_thread` RPC, while preserving existing Codex compaction behavior.
 - Added release-driven Homebrew cask sync automation via a dedicated GitHub Actions workflow, plus user docs for `brew` install/upgrade/uninstall and maintainer setup for tap sync credentials.
@@ -48,6 +50,7 @@ All notable changes to this project are documented in this file.
 - Extracted Settings CLI backend mapping logic into `src/features/settings/utils/cliBackend.ts` so multi-model behavior is isolated from the Settings view component for parity-oriented refactors.
 
 ### Added
+- Added backend sandbox setup core (`sandbox_setup_core`) with tests for Gemini MCP config upsert/install behavior.
 - Added backend `agent_profiles_list` and `agent_profile_apply` command surfaces (app + daemon + shared core) to discover `profiles/*` entries and apply profile files with symlink-first auto fallback to copy mode.
 - Added this root-level changelog to track ongoing work in canonical form.
 - Added backend tests for active-CLI argument and binary resolution, plus frontend coverage for Claude Code CLI settings persistence.

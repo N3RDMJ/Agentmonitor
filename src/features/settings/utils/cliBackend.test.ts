@@ -76,6 +76,7 @@ const baseSettings: AppSettings = {
   collaborationModesEnabled: true,
   steerEnabled: true,
   unifiedExecEnabled: true,
+  sandboxBootstrapEnabled: true,
   experimentalAppsEnabled: false,
   personality: "friendly",
   dictationEnabled: false,

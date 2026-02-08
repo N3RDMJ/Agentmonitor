@@ -132,6 +132,28 @@ export function SettingsFeaturesSection({
           <span className="settings-toggle-knob" />
         </button>
       </div>
+      <div className="settings-toggle-row">
+        <div>
+          <div className="settings-toggle-title">Sandbox bootstrap</div>
+          <div className="settings-toggle-subtitle">
+            Auto-configure sandbox tooling for Codex, Claude, and Gemini when connecting a
+            workspace.
+          </div>
+        </div>
+        <button
+          type="button"
+          className={`settings-toggle ${appSettings.sandboxBootstrapEnabled ? "on" : ""}`}
+          onClick={() =>
+            void onUpdateAppSettings({
+              ...appSettings,
+              sandboxBootstrapEnabled: !appSettings.sandboxBootstrapEnabled,
+            })
+          }
+          aria-pressed={appSettings.sandboxBootstrapEnabled}
+        >
+          <span className="settings-toggle-knob" />
+        </button>
+      </div>
       <div className="settings-subsection-title">Experimental Features</div>
       <div className="settings-subsection-subtitle">
         Preview features that may change or be removed.

@@ -45,6 +45,7 @@ export const defaultAppSettings: AppSettings = {
   collaborationModesEnabled: false,
   steerEnabled: false,
   unifiedExecEnabled: false,
+  sandboxBootstrapEnabled: true,
   experimentalAppsEnabled: false,
   personality: "friendly",
   notificationSoundsEnabled: true,

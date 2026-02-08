@@ -86,6 +86,7 @@ function buildDefaultSettings(): AppSettings {
     collaborationModesEnabled: true,
     steerEnabled: true,
     unifiedExecEnabled: true,
+    sandboxBootstrapEnabled: true,
     experimentalAppsEnabled: false,
     personality: "friendly",
     dictationEnabled: false,
@@ -169,6 +170,7 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
       : "friendly",
     reviewDeliveryMode:
       settings.reviewDeliveryMode === "detached" ? "detached" : "inline",
+    sandboxBootstrapEnabled: settings.sandboxBootstrapEnabled !== false,
     openAppTargets: normalizedTargets,
     selectedOpenAppId,
   };
