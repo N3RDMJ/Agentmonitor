@@ -5,6 +5,7 @@ All notable changes to this project are documented in this file.
 ## Unreleased
 
 ### Changed
+- Rewrote `README.md` to reflect current live product state: multi-CLI support, full vs compatible capability tiers, PTY sidecar fallback behavior, current build/validation commands, and updated architecture/persistence notes.
 - Added a non-terminal agent profile switch flow in Settings: users can select a workspace profile and apply it directly from the UI, with automatic `CLAUDE.md` targeting for Claude Code and `AGENTS.md` targeting for other CLIs.
 - Home dashboard title now uses `Agent Monitor` branding instead of `Codex Monitor`.
 - Home usage dashboard now supports a CLI filter (`All CLIs`, `Codex`, `Claude Code`, `Gemini CLI`, `Cursor CLI`) and refreshes metrics for the selected CLI scope.

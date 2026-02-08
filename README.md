@@ -3,171 +3,125 @@
 ![AgentMonitor home](docs/images/app-home.png)
 ![AgentMonitor CLI Backend settings](docs/images/settings-cli-backend.png)
 
-Agent Monitor is a Tauri app for orchestrating multiple agents across local workspaces. It provides a sidebar to manage projects, a home screen for quick actions, and a conversation view backed by the agent app-server protocol.
+AgentMonitor is a desktop Tauri app for running coding agents across local workspaces with one UI for threads, approvals, reviews, git workflows, prompts, and terminal tooling.
 
-## Features
+## What It Supports
 
-### CLI Compatibility Tiers
+### CLI Backends
 
-- **Full mode (Agent CLI/Codex):** bidirectional JSON-RPC app-server integration with full interactive capabilities.
-- **Compatible mode (Gemini CLI, Cursor CLI, Claude Code):** basic orchestration support, but limited parity for advanced live controls that depend on full duplex JSON-RPC streams.
-- The Settings UI surfaces the active mode and disables controls that are not supported by the active CLI capabilities.
+- `Codex` (full mode): bidirectional JSON-RPC app-server integration.
+- `Gemini CLI`, `Cursor CLI`, `Claude Code` (compatible mode): capability-gated UI with PTY sidecar fallback for turn execution when full app-server semantics are unavailable.
 
-### Workspaces & Threads
+### Capability Tiers
 
-- Add and persist workspaces, group/sort them, and jump into recent agent activity from the home dashboard.
-- Each workspace gets its own Gemini session with conversation history.
-- Thread management: pin/rename/archive/copy, per-thread drafts, and stop/interrupt in-flight turns.
+- Full mode enables the complete interactive surface (approvals, interrupt, MCP/apps parity, collaboration features where available).
+- Compatible mode keeps core workflows working and disables unsupported controls in Settings and runtime surfaces.
 
-### Composer & Agent Controls
+### Workspace and Thread Operations
 
-- Compose with queueing plus image attachments (picker, drag/drop, paste).
-- Autocomplete for skills (`$`), prompts (`/prompts:`), reviews (`/review`), and file paths (`@`).
-- Model picker, collaboration modes (when enabled), reasoning effort, access mode, and context usage ring.
-- Dictation with hold-to-talk shortcuts and live waveform (Whisper).
-- Render reasoning/tool/diff items and handle approval prompts.
+- Add, connect, group, clone, and worktree-manage repositories.
+- Persist thread lists and thread activity per workspace.
+- Pin, rename, archive, fork, and resume threads.
 
-### Git & GitHub
+### Composer and Runtime
 
-- Diff stats, staged/unstaged file diffs, revert/stage controls, and commit log.
-- Branch list with checkout/create plus upstream ahead/behind counts.
-- GitHub Issues and Pull Requests via `gh` (lists, diffs, comments) and open commits/PRs in the browser.
-- PR composer: "Ask PR" to send PR context into a new agent thread.
+- Prompt composer with queueing and image attachments.
+- Slash and symbol workflows (`/review`, prompts, skills, file autocomplete).
+- Model/reasoning/access controls.
+- Runtime event stream for messages, tools, diffs, and reasoning items.
 
-### Files & Prompts
+### Git and Repo Flow
 
-- File tree with search, file-type icons, and Reveal in Finder/Explorer.
-- Prompt library for global/workspace prompts: create/edit/delete/move and run in current or new threads.
-
-### UI & Experience
-
-- Resizable sidebar/right/plan/terminal/debug panels with persisted sizes.
-- Responsive layouts (desktop/tablet/phone) with tabbed navigation.
-- Sidebar usage and credits meter for account rate limits plus a home usage snapshot.
-- Terminal dock with multiple tabs for background commands (experimental).
-- In-app updates with toast-driven download/install, debug panel copy/clear, sound notifications, plus platform-specific window effects (macOS overlay title bar + vibrancy) and a reduced transparency toggle.
+- Status, staged/unstaged diffs, file operations, commit/push/pull/fetch/sync.
+- Branch switch/create workflows and remote branch helpers.
+- PR/issue helpers via `gh` when configured.
 
 ## Requirements
 
-### For Users (Pre-built Release)
+### End Users (Prebuilt App)
 
-1. **Install Gemini CLI** (requires Node.js 20+):
-   ```bash
-   npm install -g @google/gemini-cli
-   ```
-   Or run without installing: `npx @google/gemini-cli`
+Install at least one supported CLI and make it available in `PATH` (or configure its binary path in Settings):
 
-2. **Authenticate** by running `gemini` in your terminal and signing in with your Google account
+- Codex CLI
+- Gemini CLI
+- Cursor CLI
+- Claude Code CLI
 
-3. **Download Agent Monitor** from the releases page and open it
+Optional tools:
 
-The app will detect the Gemini CLI automatically. If not found, you can configure the path in Settings → Run Doctor.
+- `git` for workspace/repo features
+- `gh` for GitHub issue/PR features
 
-**Optional:**
-- Git CLI (for Git panel features)
-- GitHub CLI (`gh`) for the Issues panel
-
-### For Developers (Building from Source)
+### Developers
 
 - Node.js + npm
-- Rust toolchain (stable)
-- CMake (required for native dependencies; dictation/Whisper uses it)
-- LLVM/Clang (required on Windows to build dictation dependencies via bindgen)
-- Agent CLI installed on your system and available in `PATH`
-- Git CLI (used for worktree operations)
-- GitHub CLI (`gh`) for the Issues panel (optional)
+- Rust stable toolchain
+- CMake
+- LLVM/Clang (required on Windows for bindgen-backed dependencies)
 
-If you hit native build errors, run:
-
-```bash
-npm run doctor
-```
-
-## Getting Started
-
-Install dependencies:
+## Local Development
 
 ```bash
 npm install
-```
-
-Run in dev mode:
-
-```bash
 npm run tauri dev
 ```
 
-## Release Build
-
-Build the production Tauri bundle:
+## Build
 
 ```bash
 npm run tauri build
 ```
 
-Artifacts will be in `src-tauri/target/release/bundle/` (platform-specific subfolders).
-
-### Automated Builds (GitHub Actions)
-
-The repository includes workflows for automated builds:
-
-- **Build DMG**: Builds unsigned or signed DMG files on demand
-- **Release**: Full release workflow with code signing and notarization
-
-See [docs/RELEASE.md](docs/RELEASE.md) for setting up code signing and notarization.
-
-### Windows (opt-in)
-
-Windows builds are opt-in and use a separate Tauri config file to avoid macOS-only window effects.
+Windows opt-in build:
 
 ```bash
 npm run tauri:build:win
 ```
 
-Artifacts will be in:
-
-- `src-tauri/target/release/bundle/nsis/` (installer exe)
-- `src-tauri/target/release/bundle/msi/` (msi)
- 
-Note: building from source on Windows requires LLVM/Clang (for `bindgen` / `libclang`) in addition to CMake.
-
-## Type Checking
-
-Run the TypeScript checker (no emit):
+## Validation
 
 ```bash
+npm run lint
+npm run test
 npm run typecheck
 ```
 
-Note: `npm run build` also runs `tsc` before bundling the frontend.
+If Rust backend code changed:
 
-## Project Structure
-
+```bash
+cd src-tauri
+cargo check
 ```
+
+## Project Layout
+
+```text
 src/
-  features/         feature-sliced UI + hooks
-  services/         Tauri IPC wrapper
-  styles/           split CSS by area
-  types.ts          shared types
-src-tauri/
-  src/lib.rs        Tauri backend + Gemini CLI integration
-  tauri.conf.json   window configuration
+  App.tsx                 app composition root
+  features/               feature slices (hooks/components)
+  services/               Tauri IPC/event wrappers
+  styles/                 UI styling
+  types.ts                shared UI types
+src-tauri/src/
+  lib.rs                  Tauri command registry
+  backend/                app-server/session infrastructure
+  shared/                 core logic shared by app/daemon
+  bin/codex_monitor_daemon.rs
+                          daemon transport/wiring
 ```
+
+## Persistence
+
+- Workspaces: app data `workspaces.json`
+- App settings: app data `settings.json`
+- UI preferences and panel state: `localStorage`
 
 ## Notes
 
-- Workspaces persist to `workspaces.json` under the app data directory.
-- App settings persist to `settings.json` under the app data directory (Agent path, default access mode, UI scale).
-- Feature settings are supported in the UI and synced to `$CODEX_HOME/config.toml` (or `~/.codex/config.toml`) on load/save. Stable: Collaboration modes (`features.collaboration_modes`), personality (`personality`), Steer mode (`features.steer`), and Background terminal (`features.unified_exec`). Experimental: Collab mode (`features.collab`) and Apps (`features.apps`).
-- On launch and on window focus, the app reconnects and refreshes thread lists for each workspace.
-- The app spawns the Gemini CLI for each conversation turn; see `src-tauri/src/backend/gemini_session.rs`.
-- UI state (panel sizes, reduced transparency toggle, recent thread activity) is stored in `localStorage`.
+- Settings can sync supported Codex config keys to `$CODEX_HOME/config.toml`.
+- Compatible-mode approvals are never left hanging: hidden/unsupported approval requests receive explicit responses.
+- This repo also supports daemon/remote mode for backend command transport.
 
-## Tauri IPC Surface
+## Release and Signing
 
-Frontend calls live in `src/services/tauri.ts` and map to commands in `src-tauri/src/lib.rs`. Core commands include:
-
-- Workspace lifecycle: `list_workspaces`, `add_workspace`, `add_worktree`, `remove_workspace`, `remove_worktree`, `connect_workspace`, `update_workspace_settings`.
-- Threads: `start_thread`, `list_threads`, `resume_thread`, `archive_thread`, `send_user_message`, `turn_interrupt`, `respond_to_server_request`.
-- Reviews + models: `start_review`, `model_list`, `account_rate_limits`, `skills_list`.
-- Git + files: `get_git_status`, `get_git_diffs`, `get_git_log`, `get_git_remote`, `list_git_branches`, `checkout_git_branch`, `create_git_branch`, `list_workspace_files`.
+See `docs/RELEASE.md` for release workflow details (bundles, signing, notarization, and CI release steps).
