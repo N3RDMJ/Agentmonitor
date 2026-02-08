@@ -179,6 +179,15 @@ fn run_compatible_pty_command(
     use_stdin_prompt: bool,
     interrupt_signal: Arc<AtomicBool>,
 ) -> Result<String, String> {
+    fn abort_pty_child(
+        child: &mut Box<dyn portable_pty::Child + Send + Sync>,
+        message: String,
+    ) -> Result<String, String> {
+        let _ = child.kill();
+        let _ = child.wait();
+        Err(message)
+    }
+
     let pty_system = native_pty_system();
     let size = PtySize {
         rows: 40,
@@ -201,27 +210,46 @@ fn run_compatible_pty_command(
         .spawn_command(command)
         .map_err(|err| format!("Failed to spawn PTY sidecar process: {err}"))?;
 
-    let mut writer = pair
-        .master
-        .take_writer()
-        .map_err(|err| format!("Failed to open PTY sidecar writer: {err}"))?;
+    let mut writer = match pair.master.take_writer() {
+        Ok(writer) => writer,
+        Err(err) => {
+            return abort_pty_child(
+                &mut child,
+                format!("Failed to open PTY sidecar writer: {err}"),
+            );
+        }
+    };
     if use_stdin_prompt {
-        writer
-            .write_all(prompt.as_bytes())
-            .map_err(|err| format!("Failed writing prompt to PTY sidecar: {err}"))?;
-        writer
-            .write_all(b"\n\x04")
-            .map_err(|err| format!("Failed finalizing prompt write to PTY sidecar: {err}"))?;
-        writer
-            .flush()
-            .map_err(|err| format!("Failed flushing PTY sidecar input: {err}"))?;
+        if let Err(err) = writer.write_all(prompt.as_bytes()) {
+            return abort_pty_child(
+                &mut child,
+                format!("Failed writing prompt to PTY sidecar: {err}"),
+            );
+        }
+        if let Err(err) = writer.write_all(b"\n\x04") {
+            return abort_pty_child(
+                &mut child,
+                format!("Failed finalizing prompt write to PTY sidecar: {err}"),
+            );
+        }
+        if let Err(err) = writer.flush() {
+            return abort_pty_child(
+                &mut child,
+                format!("Failed flushing PTY sidecar input: {err}"),
+            );
+        }
     }
     drop(writer);
 
-    let mut reader = pair
-        .master
-        .try_clone_reader()
-        .map_err(|err| format!("Failed to open PTY sidecar reader: {err}"))?;
+    let mut reader = match pair.master.try_clone_reader() {
+        Ok(reader) => reader,
+        Err(err) => {
+            return abort_pty_child(
+                &mut child,
+                format!("Failed to open PTY sidecar reader: {err}"),
+            );
+        }
+    };
     let mut output = String::new();
     let mut buffer = [0_u8; 4096];
     loop {
@@ -235,7 +263,10 @@ fn run_compatible_pty_command(
                 output.push_str(&String::from_utf8_lossy(&buffer[..count]));
             }
             Err(err) => {
-                return Err(format!("Failed reading PTY sidecar output: {err}"));
+                return abort_pty_child(
+                    &mut child,
+                    format!("Failed reading PTY sidecar output: {err}"),
+                );
             }
         }
     }
