@@ -39,12 +39,45 @@ jobs:
           workspaces: './src-tauri -> target'
 
       - name: Install CMake
-        run: brew install cmake
+        run: command -v cmake >/dev/null 2>&1 || brew install cmake
 
       - name: Install dependencies
         run: npm ci
 
+      - name: Detect macOS signing capabilities
+        id: mac_signing
+        env:
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          APPLE_API_PRIVATE_KEY_B64: ${{ secrets.APPLE_API_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          sign_macos=false
+          notarize_macos=false
+
+          if [ -n "${APPLE_CERTIFICATE_P12:-}" ] && \
+             [ -n "${APPLE_CERTIFICATE_PASSWORD:-}" ] && \
+             [ -n "${CODESIGN_IDENTITY:-}" ]; then
+            sign_macos=true
+          fi
+
+          if [ "$sign_macos" = true ] && \
+             [ -n "${APPLE_API_KEY_ID:-}" ] && \
+             [ -n "${APPLE_API_ISSUER_ID:-}" ] && \
+             [ -n "${APPLE_API_PRIVATE_KEY_B64:-}" ] && \
+             [ -n "${NOTARY_PROFILE_NAME:-}" ]; then
+            notarize_macos=true
+          fi
+
+          echo "sign_macos=${sign_macos}" >> "$GITHUB_OUTPUT"
+          echo "notarize_macos=${notarize_macos}" >> "$GITHUB_OUTPUT"
+          echo "macOS signing enabled: ${sign_macos}"
+          echo "macOS notarization enabled: ${notarize_macos}"
+
       - name: Import signing certificate
+        if: ${{ steps.mac_signing.outputs.sign_macos == 'true' }}
         env:
           APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -64,6 +97,7 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$KEYCHAIN"
 
       - name: Configure notarytool credentials
+        if: ${{ steps.mac_signing.outputs.notarize_macos == 'true' }}
         env:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
@@ -90,13 +124,19 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY="$(cat "$HOME/.tauri/codexmonitor.key")"
           npm run tauri -- build --bundles app
 
+      - name: Skip signing for test release
+        if: ${{ steps.mac_signing.outputs.sign_macos != 'true' }}
+        run: echo "Apple signing secrets are missing; packaging unsigned macOS artifacts for test release."
+
       - name: Bundle OpenSSL and re-sign
+        if: ${{ steps.mac_signing.outputs.sign_macos == 'true' }}
         run: |
           set -euo pipefail
           CODESIGN_IDENTITY="$CODESIGN_IDENTITY" \
             scripts/macos-fix-openssl.sh
 
       - name: Notarize and staple
+        if: ${{ steps.mac_signing.outputs.notarize_macos == 'true' }}
         run: |
           set -euo pipefail
           ditto -c -k --keepParent \
