@@ -2,6 +2,29 @@
 
 All docs must canonical, no past commentary, only live state.
 
+## Fork & Remote Rules
+
+This repo is a fork of `Dimillian/CodexMonitor`. The `gh` CLI defaults to the **upstream** fork for PRs and issues.
+
+- **Origin**: `N3RDMJ/Agentmonitor` (our repo — all PRs go here)
+- **Upstream**: `Dimillian/CodexMonitor` (do NOT create PRs here)
+
+### Mandatory Rules
+
+1. **Always use `--repo N3RDMJ/Agentmonitor`** on every `gh pr create`, `gh issue create`, and `gh api` call. No exceptions.
+2. **After every `git push`**, verify the branch landed on origin: `git ls-remote origin <branch>`. If empty, the push went to the wrong remote.
+3. **Never run bare `gh pr create`** without `--repo`. The default will target upstream.
+
+## Documentation Rules
+
+Keep `README.md` in sync whenever a significant change ships:
+
+- New feature or capability → update Features section
+- New CLI/adapter → update Requirements + Multi-Agent sections
+- Changed build/dev commands → update Getting Started / Release Build
+- New settings or UI surfaces → mention in relevant section
+- Structural changes (new feature folders, shared cores) → update Project Structure
+
 ## Project Summary
 CodexMonitor is a Tauri app that orchestrates Codex agents across local workspaces.
 
