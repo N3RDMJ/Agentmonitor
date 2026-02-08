@@ -88,13 +88,6 @@ fn profile_label(name: &str) -> String {
         .join(" ")
 }
 
-fn is_valid_profile_name(value: &str) -> bool {
-    !value.is_empty()
-        && value
-            .chars()
-            .all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '_')
-}
-
 async fn resolve_workspace_root(
     workspaces: &Mutex<HashMap<String, WorkspaceEntry>>,
     workspace_id: &str,
@@ -168,8 +161,7 @@ fn write_profile_state(
     let data = serde_json::to_string_pretty(&state)
         .map_err(|err| format!("Failed to serialize profile state: {err}"))?;
     let state_path = workspace_root.join(PROFILE_STATE_FILE);
-    std::fs::write(state_path, data)
-        .map_err(|err| format!("Failed to persist profile state: {err}"))
+    std::fs::write(state_path, data).map_err(|err| format!("Failed to persist profile state: {err}"))
 }
 
 fn remove_existing_target(target_path: &Path) -> Result<(), String> {
@@ -249,8 +241,7 @@ fn detect_active_copy_profile(
         return None;
     }
     let target_content = std::fs::read(workspace_root.join(target_file)).ok()?;
-    let source_content =
-        std::fs::read(profile_source(workspace_root, &state.profile, target_file)).ok()?;
+    let source_content = std::fs::read(profile_source(workspace_root, &state.profile, target_file)).ok()?;
     if target_content == source_content {
         Some(state.profile.clone())
     } else {
@@ -295,9 +286,6 @@ pub(crate) async fn apply_agent_profile_core(
     cli_type: &str,
     mode: AgentProfileApplyMode,
 ) -> Result<AgentProfileApplyResponse, String> {
-    if !is_valid_profile_name(&profile) {
-        return Err("Invalid profile name. Use letters, numbers, `-`, or `_` only.".to_string());
-    }
     let workspace_root = resolve_workspace_root(workspaces, &workspace_id).await?;
     let target_file = selected_target_file(cli_type).to_string();
     let source = profile_source(&workspace_root, &profile, &target_file);
@@ -320,16 +308,14 @@ in that profile or switch CLI mode.",
             apply_symlink_mode(&workspace_root, &source, &target)?;
             AgentProfileWriteMode::Symlink
         }
-        AgentProfileApplyMode::Auto => {
-            match apply_symlink_mode(&workspace_root, &source, &target) {
-                Ok(()) => AgentProfileWriteMode::Symlink,
-                Err(_) => {
-                    apply_copy_mode(&source, &target)?;
-                    fallback_used = true;
-                    AgentProfileWriteMode::Copy
-                }
+        AgentProfileApplyMode::Auto => match apply_symlink_mode(&workspace_root, &source, &target) {
+            Ok(()) => AgentProfileWriteMode::Symlink,
+            Err(_) => {
+                apply_copy_mode(&source, &target)?;
+                fallback_used = true;
+                AgentProfileWriteMode::Copy
             }
-        }
+        },
     };
 
     write_profile_state(&workspace_root, &profile, &target_file, active_mode)?;
@@ -339,24 +325,4 @@ in that profile or switch CLI mode.",
         active_mode,
         fallback_used,
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::is_valid_profile_name;
-
-    #[test]
-    fn profile_name_validation_accepts_safe_names() {
-        assert!(is_valid_profile_name("default"));
-        assert!(is_valid_profile_name("claude_review"));
-        assert!(is_valid_profile_name("release-2026"));
-    }
-
-    #[test]
-    fn profile_name_validation_rejects_unsafe_names() {
-        assert!(!is_valid_profile_name(""));
-        assert!(!is_valid_profile_name("../escape"));
-        assert!(!is_valid_profile_name("with space"));
-        assert!(!is_valid_profile_name("name/slash"));
-    }
 }

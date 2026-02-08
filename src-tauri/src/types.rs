@@ -690,7 +690,7 @@ fn default_cursor_default_mode() -> String {
 }
 
 fn default_cursor_output_format() -> String {
-    "text".to_string()
+    "stream-json".to_string()
 }
 
 fn default_cursor_attribute_commits() -> bool {
@@ -1272,7 +1272,7 @@ mod tests {
         assert!(settings.claude_args.is_none());
         assert!(!settings.cursor_vim_mode);
         assert_eq!(settings.cursor_default_mode, "agent");
-        assert_eq!(settings.cursor_output_format, "text");
+        assert_eq!(settings.cursor_output_format, "stream-json");
         assert!(settings.cursor_attribute_commits);
         assert!(settings.cursor_attribute_prs);
         assert!(!settings.cursor_use_http1);
@@ -1495,7 +1495,7 @@ mod tests {
         assert!(settings.claude_args.is_none());
         assert!(!settings.cursor_vim_mode);
         assert_eq!(settings.cursor_default_mode, "agent");
-        assert_eq!(settings.cursor_output_format, "text");
+        assert_eq!(settings.cursor_output_format, "stream-json");
         assert!(settings.cursor_attribute_commits);
         assert!(settings.cursor_attribute_prs);
         assert!(!settings.cursor_use_http1);

@@ -28,7 +28,11 @@ type RenderedHook = {
   unmount: () => void;
 };
 
-function renderImageDropHook(options: { disabled: boolean; onAttachImages?: (paths: string[]) => void }): RenderedHook {
+function renderImageDropHook(options: {
+  disabled: boolean;
+  onAttachImages?: (paths: string[]) => void;
+  onInsertPaths?: (paths: string[]) => void;
+}): RenderedHook {
   let result: HookResult | undefined;
 
   function Test() {
@@ -108,7 +112,12 @@ describe("useComposerImageDrop", () => {
 
   it("uses file paths on drop when available", async () => {
     const onAttachImages = vi.fn();
-    const hook = renderImageDropHook({ disabled: false, onAttachImages });
+    const onInsertPaths = vi.fn();
+    const hook = renderImageDropHook({
+      disabled: false,
+      onAttachImages,
+      onInsertPaths,
+    });
 
     const file = new File(["data"], "photo.png", { type: "image/png" });
     (file as File & { path?: string }).path = "/tmp/photo.png";
@@ -121,6 +130,32 @@ describe("useComposerImageDrop", () => {
     });
 
     expect(onAttachImages).toHaveBeenCalledWith(["/tmp/photo.png"]);
+    expect(onInsertPaths).not.toHaveBeenCalled();
+
+    hook.unmount();
+  });
+
+  it("inserts dropped non-image file paths", async () => {
+    const onAttachImages = vi.fn();
+    const onInsertPaths = vi.fn();
+    const hook = renderImageDropHook({
+      disabled: false,
+      onAttachImages,
+      onInsertPaths,
+    });
+
+    const file = new File(["data"], "notes.txt", { type: "text/plain" });
+    (file as File & { path?: string }).path = "/tmp/notes.txt";
+
+    await act(async () => {
+      await hook.result.handleDrop({
+        dataTransfer: { files: [file], items: [] },
+        preventDefault: vi.fn(),
+      } as unknown as React.DragEvent<HTMLElement>);
+    });
+
+    expect(onInsertPaths).toHaveBeenCalledWith(["/tmp/notes.txt"]);
+    expect(onAttachImages).not.toHaveBeenCalled();
 
     hook.unmount();
   });
@@ -177,7 +212,12 @@ describe("useComposerImageDrop", () => {
 
   it("filters tauri drag-drop paths and respects drop target", async () => {
     const onAttachImages = vi.fn();
-    const hook = renderImageDropHook({ disabled: false, onAttachImages });
+    const onInsertPaths = vi.fn();
+    const hook = renderImageDropHook({
+      disabled: false,
+      onAttachImages,
+      onInsertPaths,
+    });
 
     const target = document.createElement("div");
     target.getBoundingClientRect = () =>
@@ -220,6 +260,7 @@ describe("useComposerImageDrop", () => {
     });
 
     expect(onAttachImages).toHaveBeenCalledWith(["/tmp/photo.png"]);
+    expect(onInsertPaths).toHaveBeenCalledWith(["/tmp/note.txt"]);
 
     hook.unmount();
   });

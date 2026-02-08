@@ -200,6 +200,24 @@ export function ComposerInput({
   } = useComposerImageDrop({
     disabled,
     onAttachImages,
+    onInsertPaths: (paths) => {
+      if (paths.length === 0) {
+        return;
+      }
+      const textarea = textareaRef.current;
+      const start = textarea?.selectionStart ?? text.length;
+      const end = textarea?.selectionEnd ?? start;
+      const before = text.slice(0, start);
+      const after = text.slice(end);
+      const pathBlock = paths.join("\n");
+      const needsLeadingBreak = before.length > 0 && !before.endsWith("\n");
+      const needsTrailingBreak = after.length > 0 && !after.startsWith("\n");
+      const inserted = `${needsLeadingBreak ? "\n" : ""}${pathBlock}${
+        needsTrailingBreak ? "\n" : ""
+      }`;
+      const next = `${before}${inserted}${after}`;
+      onTextChange(next, before.length + inserted.length);
+    },
   });
 
   useEffect(() => {
@@ -306,6 +324,14 @@ export function ComposerInput({
     },
     [handlePaste, onTextPaste],
   );
+  const isProcessingNoStop = isProcessing && !canStop;
+  const processingQueueMode = isProcessingNoStop && sendLabel === "Queue";
+  const processingSteerMode = isProcessingNoStop && sendLabel === "Send";
+  const actionLabel = processingQueueMode
+    ? "Queue"
+    : processingSteerMode
+      ? "Steer"
+      : null;
 
   return (
     <div className="composer-input">
@@ -383,6 +409,19 @@ export function ComposerInput({
                 Dismiss
               </button>
             )}
+          </div>
+        )}
+        {processingSteerMode && (
+          <div className="composer-processing-hint" role="status">
+            <span>Agent is working. Enter steers.</span>
+            <span className="composer-processing-hint-shortcut">
+              <kbd>Tab</kbd> queues
+            </span>
+          </div>
+        )}
+        {processingQueueMode && (
+          <div className="composer-processing-hint" role="status">
+            Agent is working. Enter queues.
           </div>
         )}
         {suggestionsOpen && (
@@ -554,15 +593,22 @@ export function ComposerInput({
             )}
           </>
         ) : (
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path
-              d="M12 5l6 6m-6-6L6 11m6-6v14"
-              stroke="currentColor"
-              strokeWidth="1.7"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M12 5l6 6m-6-6L6 11m6-6v14"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            {actionLabel && (
+              <span className="composer-action-label" aria-hidden>
+                {actionLabel}
+              </span>
+            )}
+          </>
         )}
       </button>
     </div>

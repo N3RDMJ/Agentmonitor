@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useReducer, useRef } from "react";
 import type {
-  CliCapabilities,
+  CliType,
   CustomPromptOption,
   DebugEntry,
   ThreadListSortKey,
@@ -24,6 +24,7 @@ import { makeCustomNameKey, saveCustomName } from "../utils/threadStorage";
 
 type UseThreadsOptions = {
   activeWorkspace: WorkspaceInfo | null;
+  cliType?: CliType;
   onWorkspaceConnected: (id: string) => void;
   onDebug?: (entry: DebugEntry) => void;
   model?: string | null;
@@ -35,11 +36,11 @@ type UseThreadsOptions = {
   customPrompts?: CustomPromptOption[];
   onMessageActivity?: () => void;
   threadSortKey?: ThreadListSortKey;
-  cliCapabilities?: CliCapabilities;
 };
 
 export function useThreads({
   activeWorkspace,
+  cliType = "codex",
   onWorkspaceConnected,
   onDebug,
   model,
@@ -51,7 +52,6 @@ export function useThreads({
   customPrompts = [],
   onMessageActivity,
   threadSortKey = "updated_at",
-  cliCapabilities,
 }: UseThreadsOptions) {
   const [state, dispatch] = useReducer(threadReducer, initialState);
   const loadedThreadsRef = useRef<Record<string, boolean>>({});
@@ -61,11 +61,7 @@ export function useThreads({
   const detachedReviewNoticeRef = useRef<Set<string>>(new Set());
   planByThreadRef.current = state.planByThread;
   const { approvalAllowlistRef, handleApprovalDecision, handleApprovalRemember } =
-    useThreadApprovals({
-      dispatch,
-      onDebug,
-      approvalsEnabled: cliCapabilities?.supportsApprovals !== false,
-    });
+    useThreadApprovals({ dispatch, onDebug });
   const { handleUserInputSubmit } = useThreadUserInput({ dispatch });
   const {
     customNamesRef,
@@ -223,7 +219,6 @@ export function useThreads({
     onReviewExited: handleReviewExited,
     approvalAllowlistRef,
     pendingInterruptsRef,
-    approvalsEnabled: cliCapabilities?.supportsApprovals !== false,
   });
 
   const handleAccountLoginCompleted = useCallback(
@@ -356,6 +351,7 @@ export function useThreads({
   } = useThreadMessaging({
     activeWorkspace,
     activeThreadId,
+    cliType,
     accessMode,
     model,
     effort,
@@ -381,7 +377,6 @@ export function useThreads({
     refreshThread,
     forkThreadForWorkspace,
     updateThreadParent,
-    cliCapabilities,
   });
 
   const setActiveThreadId = useCallback(
@@ -432,8 +427,7 @@ export function useThreads({
     activeThreadId,
     setActiveThreadId,
     activeItems,
-    approvals:
-      cliCapabilities?.supportsApprovals === false ? [] : state.approvals,
+    approvals: state.approvals,
     userInputRequests: state.userInputRequests,
     threadsByWorkspace: state.threadsByWorkspace,
     threadParentById: state.threadParentById,

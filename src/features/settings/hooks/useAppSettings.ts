@@ -39,7 +39,7 @@ function buildDefaultSettings(): AppSettings {
     claudeArgs: null,
     cursorVimMode: false,
     cursorDefaultMode: "agent",
-    cursorOutputFormat: "text",
+    cursorOutputFormat: "stream-json",
     cursorAttributeCommits: true,
     cursorAttributePRs: true,
     cursorUseHttp1: false,
@@ -170,7 +170,7 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
       : "agent",
     cursorOutputFormat: allowedCursorFormats.has(settings.cursorOutputFormat)
       ? settings.cursorOutputFormat
-      : "text",
+      : "stream-json",
     cursorAttributeCommits: settings.cursorAttributeCommits !== false,
     cursorAttributePRs: settings.cursorAttributePRs !== false,
     cursorUseHttp1: Boolean(settings.cursorUseHttp1),

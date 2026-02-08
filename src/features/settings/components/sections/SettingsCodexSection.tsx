@@ -347,6 +347,91 @@ export function SettingsCodexSection({
         </div>
       </div>
       <div className="settings-field">
+        <label className="settings-field-label" htmlFor="agent-profile-workspace">
+          Agent profile workspace
+        </label>
+        <select
+          id="agent-profile-workspace"
+          className="settings-select"
+          value={agentProfilesWorkspaceId ?? ""}
+          onChange={(event) => onSetAgentProfilesWorkspaceId(event.target.value || null)}
+        >
+          <option value="" disabled>
+            Select workspace
+          </option>
+          {projects.map((workspace) => (
+            <option key={workspace.id} value={workspace.id}>
+              {workspace.name}
+            </option>
+          ))}
+        </select>
+        {agentProfilesWorkspacePath && (
+          <div className="settings-help">
+            Applies in <code>{agentProfilesWorkspacePath}</code>
+          </div>
+        )}
+        <label className="settings-field-label" htmlFor="agent-profile-select">
+          {agentProfileTargetFile} profile
+        </label>
+        <div className="settings-field-row">
+          <select
+            id="agent-profile-select"
+            className="settings-select"
+            value={selectedAgentProfile}
+            onChange={(event) => onSetSelectedAgentProfile(event.target.value)}
+            disabled={agentProfilesLoading || agentProfiles.length === 0}
+          >
+            <option value="" disabled>
+              {agentProfilesLoading
+                ? "Loading profiles..."
+                : agentProfiles.length === 0
+                  ? "No profiles found"
+                  : "Select profile"}
+            </option>
+            {agentProfiles
+              .filter((profile) =>
+                agentProfileTargetFile === "CLAUDE.md" ? profile.hasClaude : profile.hasAgents,
+              )
+              .map((profile) => (
+                <option key={profile.name} value={profile.name}>
+                  {profile.label}
+                </option>
+              ))}
+          </select>
+          <button
+            type="button"
+            className="ghost"
+            onClick={onRefreshAgentProfiles}
+            disabled={agentProfilesLoading || !agentProfilesWorkspaceId}
+          >
+            Refresh
+          </button>
+          <button
+            type="button"
+            className="primary"
+            onClick={() => onApplyAgentProfile("auto")}
+            disabled={
+              agentProfilesApplying ||
+              !agentProfilesWorkspaceId ||
+              !selectedAgentProfile ||
+              agentProfiles.length === 0
+            }
+          >
+            {agentProfilesApplying ? "Applying..." : "Apply"}
+          </button>
+        </div>
+        {activeAgentProfile && (
+          <div className="settings-help">
+            Active profile: <code>{activeAgentProfile}</code>
+            {activeAgentProfileMode ? ` (${activeAgentProfileMode})` : ""}
+          </div>
+        )}
+        {agentProfilesError && <div className="settings-help settings-error">{agentProfilesError}</div>}
+        <div className="settings-help">
+          Uses <code>CLAUDE.md</code> for Claude Code and <code>AGENTS.md</code> for other CLIs.
+        </div>
+      </div>
+      <div className="settings-field">
         <label className="settings-field-label" htmlFor="codex-path">
           Default Agent path
         </label>

@@ -163,7 +163,7 @@ function setMockFileReader() {
 }
 
 describe("Composer attachments integration", () => {
-  it("attaches dropped image files, filters non-images, and dedupes paths", async () => {
+  it("attaches dropped image files, links non-image paths, and dedupes paths", async () => {
     const harness = renderComposerHarness({
       activeThreadId: "thread-1",
       activeWorkspaceId: "ws-1",
@@ -180,6 +180,9 @@ describe("Composer attachments integration", () => {
     });
 
     expect(getAttachmentNames(harness.container)).toEqual(["photo.png"]);
+    expect((getTextarea(harness.container) as HTMLTextAreaElement).value).toBe(
+      "/tmp/notes.txt",
+    );
 
     const imageTwo = new File(["data"], "second.jpg", { type: "image/jpeg" });
     (imageTwo as File & { path?: string }).path = "/tmp/second.jpg";
@@ -192,6 +195,35 @@ describe("Composer attachments integration", () => {
       "photo.png",
       "second.jpg",
     ]);
+    expect((getTextarea(harness.container) as HTMLTextAreaElement).value).toBe(
+      "/tmp/notes.txt",
+    );
+
+    harness.unmount();
+  });
+
+  it("inserts dropped non-image file paths into the draft", async () => {
+    const harness = renderComposerHarness({
+      activeThreadId: "thread-1",
+      activeWorkspaceId: "ws-1",
+    });
+    const textarea = getTextarea(harness.container);
+
+    const folder = new File(["data"], "folder", {
+      type: "application/octet-stream",
+    });
+    (folder as File & { path?: string }).path = "/tmp/project";
+    const file = new File(["data"], "notes.md", { type: "text/markdown" });
+    (file as File & { path?: string }).path = "/tmp/project/notes.md";
+
+    await act(async () => {
+      dispatchDrop(textarea, [folder, file]);
+    });
+
+    expect(getAttachmentNames(harness.container)).toEqual([]);
+    expect((getTextarea(harness.container) as HTMLTextAreaElement).value).toBe(
+      "/tmp/project\n/tmp/project/notes.md",
+    );
 
     harness.unmount();
   });

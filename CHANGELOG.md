@@ -5,13 +5,20 @@ All notable changes to this project are documented in this file.
 ## Unreleased
 
 ### Changed
-- Bumped app release version metadata to `0.8.2` for the updated release branch.
-- Added the Homebrew tap sync workflow (`.github/workflows/homebrew-tap.yml`) with corrected heredoc indentation so the workflow parses and runs.
-- Bumped app release version metadata to `0.8.0` for a full cross-platform test release pass before the next real production cut.
-- Rewrote `README.md` to reflect current live product state: multi-CLI support, full vs compatible capability tiers, PTY sidecar fallback behavior, current build/validation commands, and updated architecture/persistence notes.
+- Fixed `homebrew-tap.yml` YAML parsing by indenting the embedded cask heredoc under the `run: |` block, resolving the workflow syntax error reported at line 94.
+- Added compact support for Claude Code mode by routing `/compact` to a regular user command message path instead of Codex-only `compact_thread` RPC, while preserving existing Codex compaction behavior.
+- Added release-driven Homebrew cask sync automation via a dedicated GitHub Actions workflow, plus user docs for `brew` install/upgrade/uninstall and maintainer setup for tap sync credentials.
+- Global `config.toml` policy now permits external symlink targets, so Codex config read/write operations work when `~/.codex/config.toml` points to a symlinked file.
+- Composer drag-and-drop now inserts dropped non-image file/folder paths into the draft text while still attaching dropped images to message context.
+- Composer now surfaces queue vs steer behavior while an agent is processing: send button shows `Steer`/`Queue` only for explicit `Send`/`Queue` modes, and steer mode includes an inline `Tab`-to-queue hint.
+- Codex parity guardrails now explicitly allow `src/styles/composer.css` so fork-specific composer UX clarity updates do not fail upstream style parity checks.
+- Cursor CLI output format default is now `stream-json` (backend + settings fallback defaults) instead of `text` for new/legacy settings without an explicit Cursor format.
+- Release `latest.json` generation now points updater asset URLs at `N3RDMJ/Agentmonitor` instead of `Dimillian/CodexMonitor`.
+- Codex parity guardrails now explicitly allow fork-specific style divergences in `src/styles/sidebar.css` and `src/styles/mobile-setup-wizard.css`, preventing unrelated release PRs from failing parity CI.
 - Added a non-terminal agent profile switch flow in Settings: users can select a workspace profile and apply it directly from the UI, with automatic `CLAUDE.md` targeting for Claude Code and `AGENTS.md` targeting for other CLIs.
 - Home dashboard title now uses `Agent Monitor` branding instead of `Codex Monitor`.
 - Home usage dashboard now supports a CLI filter (`All CLIs`, `Codex`, `Claude Code`, `Gemini CLI`, `Cursor CLI`) and refreshes metrics for the selected CLI scope.
+- Chat messages now render fenced code blocks with syntax highlighting using existing Prism token styles, while unknown languages safely fall back to escaped plain code.
 - Local usage backend snapshot command now accepts an optional CLI filter and classifies usage by model family so dashboard metrics can be scoped to a selected CLI.
 - Renamed remaining app metadata and release surfaces from `gemini-monitor`/`GeminiMonitor` to `agent-monitor`/`Agent Monitor` (npm package, Cargo package/lib, updater endpoint, docs, and DMG workflow artifact/app naming).
 - Restored upstream CodexMonitor layout primitives and shell surfaces (`Sidebar`, `Home`, design-system modal/panel/popover/toast primitives, DS token imports) to recover visual/interaction parity for Codex paths.
@@ -39,15 +46,6 @@ All notable changes to this project are documented in this file.
 - Added a Codex upstream parity CI guardrail (`npm run check:codex-parity`) to fail PRs when tracked Codex visual paths diverge from upstream.
 - Restored the shared Codex Rust core (`src-tauri/src/codex/*` and `src-tauri/src/shared/codex_core.rs`) to upstream parity and reintroduced `codex_aux_core` wiring needed by upstream Codex command flows.
 - Extracted Settings CLI backend mapping logic into `src/features/settings/utils/cliBackend.ts` so multi-model behavior is isolated from the Settings view component for parity-oriented refactors.
-- Expanded structured Codex `config.toml` settings coverage in app settings sync/UI (model write, provider/reasoning/search/auth/update policy keys plus additional `[features]` flags), while keeping raw TOML editing available for advanced unmanaged sections.
-- Added CLI capability tiers (`Full` vs `Compatible`) with shared capability mapping, surfaced mode messaging in Settings, and capability-based disabling/gating for unsupported collaboration/apps/Codex-config controls on non-Codex CLIs.
-- Extended capability gating into thread/runtime flows so compatible CLIs suppress approval surfaces and unsupported interrupt/apps/MCP actions gracefully instead of exposing full-mode controls.
-- Backend session spawn now auto-detects JSON-RPC app-server support per CLI; when unavailable, it falls back to a PTY-compatible sidecar transport that preserves basic thread lifecycle and message streaming without breaking Codex full-mode behavior.
-- Approval request handling now sends explicit server responses even when approvals UI is disabled (auto-decline for incoming hidden approvals), preventing backend approval waits from hanging.
-- Hardened release workflow signing key handling to accept raw or base64 minisign private keys with explicit format validation, and to allow unsigned macOS packaging fallback on forks without Apple signing secrets.
-- Rotated the Tauri updater signing keypair for the fork test release and updated `src-tauri/tauri.conf.json` updater public key to match the new CI signing secret.
-- Fixed release workflow updater env wiring by passing the signing key file path (not inline key content) to `TAURI_SIGNING_PRIVATE_KEY`, resolving base64 decode failures during bundle builds.
-- Corrected updater key normalization in release CI to keep the Tauri signing key in encoded form (auto-encoding raw input when needed), fixing repeated `Invalid symbol 32` decode failures.
 
 ### Added
 - Added backend `agent_profiles_list` and `agent_profile_apply` command surfaces (app + daemon + shared core) to discover `profiles/*` entries and apply profile files with symlink-first auto fallback to copy mode.
