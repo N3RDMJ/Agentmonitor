@@ -42,6 +42,7 @@ All notable changes to this project are documented in this file.
 - Extended capability gating into thread/runtime flows so compatible CLIs suppress approval surfaces and unsupported interrupt/apps/MCP actions gracefully instead of exposing full-mode controls.
 - Backend session spawn now auto-detects JSON-RPC app-server support per CLI; when unavailable, it falls back to a PTY-compatible sidecar transport that preserves basic thread lifecycle and message streaming without breaking Codex full-mode behavior.
 - Approval request handling now sends explicit server responses even when approvals UI is disabled (auto-decline for incoming hidden approvals), preventing backend approval waits from hanging.
+- Hardened release workflow signing key handling to accept raw or base64 minisign private keys with explicit format validation, and to allow unsigned macOS packaging fallback on forks without Apple signing secrets.
 
 ### Added
 - Added backend `agent_profiles_list` and `agent_profile_apply` command surfaces (app + daemon + shared core) to discover `profiles/*` entries and apply profile files with symlink-first auto fallback to copy mode.

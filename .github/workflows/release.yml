@@ -115,7 +115,15 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$HOME/.tauri"
-          echo "$TAURI_SIGNING_PRIVATE_KEY_B64" | base64 --decode > "$HOME/.tauri/codexmonitor.key"
+          if printf '%s' "$TAURI_SIGNING_PRIVATE_KEY_B64" | grep -q '^untrusted comment:'; then
+            printf '%s\n' "$TAURI_SIGNING_PRIVATE_KEY_B64" > "$HOME/.tauri/codexmonitor.key"
+          else
+            printf '%s' "$TAURI_SIGNING_PRIVATE_KEY_B64" | base64 --decode > "$HOME/.tauri/codexmonitor.key"
+          fi
+          if ! head -n 1 "$HOME/.tauri/codexmonitor.key" | grep -q '^untrusted comment:'; then
+            echo "Invalid TAURI_SIGNING_PRIVATE_KEY_B64 secret: expected minisign key starting with 'untrusted comment:'"
+            exit 1
+          fi
 
       - name: Build app bundle
         run: |
@@ -244,7 +252,15 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$HOME/.tauri"
-          echo "$TAURI_SIGNING_PRIVATE_KEY_B64" | base64 --decode > "$HOME/.tauri/codexmonitor.key"
+          if printf '%s' "$TAURI_SIGNING_PRIVATE_KEY_B64" | grep -q '^untrusted comment:'; then
+            printf '%s\n' "$TAURI_SIGNING_PRIVATE_KEY_B64" > "$HOME/.tauri/codexmonitor.key"
+          else
+            printf '%s' "$TAURI_SIGNING_PRIVATE_KEY_B64" | base64 --decode > "$HOME/.tauri/codexmonitor.key"
+          fi
+          if ! head -n 1 "$HOME/.tauri/codexmonitor.key" | grep -q '^untrusted comment:'; then
+            echo "Invalid TAURI_SIGNING_PRIVATE_KEY_B64 secret: expected minisign key starting with 'untrusted comment:'"
+            exit 1
+          fi
 
       - name: build AppImage and RPM
         run: |
@@ -318,11 +334,18 @@ jobs:
           import os
           from pathlib import Path
 
-          raw = base64.b64decode(os.environ["TAURI_SIGNING_PRIVATE_KEY_B64"])
+          value = os.environ["TAURI_SIGNING_PRIVATE_KEY_B64"]
+          if value.startswith("untrusted comment:"):
+            raw = value.encode("utf-8")
+          else:
+            raw = base64.b64decode(value)
           home = Path.home()
           target = home / ".tauri"
           target.mkdir(parents=True, exist_ok=True)
           (target / "codexmonitor.key").write_bytes(raw)
+          first_line = (target / "codexmonitor.key").read_text(encoding="utf-8", errors="replace").splitlines()[0:1]
+          if not first_line or not first_line[0].startswith("untrusted comment:"):
+            raise SystemExit("Invalid TAURI_SIGNING_PRIVATE_KEY_B64 secret: expected minisign key starting with 'untrusted comment:'")
           PY
 
       - name: build windows bundles
