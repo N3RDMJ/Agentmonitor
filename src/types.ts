@@ -244,6 +244,7 @@ export type AppSettings = {
   collaborationModesEnabled: boolean;
   steerEnabled: boolean;
   unifiedExecEnabled: boolean;
+  sandboxBootstrapEnabled: boolean;
   experimentalAppsEnabled: boolean;
   personality: PersonalityPreference;
   dictationEnabled: boolean;

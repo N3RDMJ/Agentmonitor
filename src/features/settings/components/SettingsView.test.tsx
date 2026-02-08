@@ -82,6 +82,7 @@ const baseSettings: AppSettings = {
   collaborationModesEnabled: true,
   steerEnabled: true,
   unifiedExecEnabled: true,
+  sandboxBootstrapEnabled: true,
   experimentalAppsEnabled: false,
   personality: "friendly",
   dictationEnabled: false,
@@ -1092,6 +1093,27 @@ describe("SettingsView Features", () => {
     await waitFor(() => {
       expect(onUpdateAppSettings).toHaveBeenCalledWith(
         expect.objectContaining({ unifiedExecEnabled: false }),
+      );
+    });
+  });
+
+  it("toggles sandbox bootstrap in stable features", async () => {
+    const onUpdateAppSettings = vi.fn().mockResolvedValue(undefined);
+    renderFeaturesSection({
+      onUpdateAppSettings,
+      appSettings: { sandboxBootstrapEnabled: true },
+    });
+
+    const sandboxTitle = screen.getByText("Sandbox bootstrap");
+    const sandboxRow = sandboxTitle.closest(".settings-toggle-row");
+    expect(sandboxRow).not.toBeNull();
+
+    const toggle = within(sandboxRow as HTMLElement).getByRole("button");
+    fireEvent.click(toggle);
+
+    await waitFor(() => {
+      expect(onUpdateAppSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ sandboxBootstrapEnabled: false }),
       );
     });
   });

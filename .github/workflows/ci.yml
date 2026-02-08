@@ -35,6 +35,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -42,6 +44,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Codex upstream parity
+        env:
+          CODEX_PARITY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          CODEX_PARITY_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: npm run check:codex-parity
   test-js:
     runs-on: ubuntu-latest

@@ -30,6 +30,32 @@ function isAllowedPath(path, allowList) {
   });
 }
 
+function normalizeRef(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function commitExists(ref) {
+  try {
+    runGit(["rev-parse", "--verify", `${ref}^{commit}`]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function collectDisallowedDiffPaths(upstreamRef, targetRef, pathSpecs, allowDiffPaths) {
+  const diffArgs = ["diff", "--name-only", upstreamRef, targetRef, "--", ...pathSpecs];
+  const changed = runGit(diffArgs)
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return changed.filter((path) => !isAllowedPath(path, allowDiffPaths));
+}
+
 function main() {
   const rawConfig = readFileSync(configPath, "utf8");
   const config = JSON.parse(rawConfig);
@@ -49,13 +75,48 @@ function main() {
   }
 
   runGit(["fetch", "--depth", "1", upstreamRepo, upstreamRef]);
-  const diffArgs = ["diff", "--name-only", "FETCH_HEAD", "HEAD", "--", ...pathSpecs];
-  const changed = runGit(diffArgs)
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const disallowed = changed.filter((path) => !isAllowedPath(path, allowDiffPaths));
+  const baseRef = normalizeRef(process.env.CODEX_PARITY_BASE_SHA);
+  const headRef = normalizeRef(process.env.CODEX_PARITY_HEAD_SHA) ?? "HEAD";
+  const canCompareBase =
+    baseRef !== null && commitExists(baseRef) && headRef !== null && commitExists(headRef);
 
+  if (canCompareBase) {
+    const baseDisallowed = collectDisallowedDiffPaths(
+      "FETCH_HEAD",
+      baseRef,
+      pathSpecs,
+      allowDiffPaths,
+    );
+    const headDisallowed = collectDisallowedDiffPaths(
+      "FETCH_HEAD",
+      headRef,
+      pathSpecs,
+      allowDiffPaths,
+    );
+    const baseSet = new Set(baseDisallowed);
+    const introduced = headDisallowed.filter((path) => !baseSet.has(path));
+
+    if (introduced.length > 0) {
+      console.error("Codex upstream parity check failed.");
+      console.error("The following tracked paths newly differ from upstream:");
+      for (const path of introduced) {
+        console.error(`- ${path}`);
+      }
+      process.exit(1);
+    }
+
+    if (headDisallowed.length > 0) {
+      console.log(
+        `Codex upstream parity check passed (no new drift; ${headDisallowed.length} pre-existing divergence path(s)).`,
+      );
+      return;
+    }
+
+    console.log("Codex upstream parity check passed.");
+    return;
+  }
+
+  const disallowed = collectDisallowedDiffPaths("FETCH_HEAD", "HEAD", pathSpecs, allowDiffPaths);
   if (disallowed.length > 0) {
     console.error("Codex upstream parity check failed.");
     console.error("The following tracked paths differ from upstream:");
