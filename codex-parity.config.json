@@ -16,7 +16,15 @@
     "src/styles/mobile-setup-wizard.css",
     "src/styles/settings.css",
     "src/styles/sidebar.css",
+    "src/styles/diff-viewer.css",
+    "src/styles/home.css",
     "src/styles/tabbar.css",
+    "src/styles/terminal.css",
+    "src/styles/themes.dark.css",
+    "src/styles/themes.dim.css",
+    "src/styles/themes.light.css",
+    "src/styles/themes.system.css",
+    "src-tauri/src/codex/mod.rs",
     "src-tauri/src/shared/codex_aux_core.rs"
   ]
 }
