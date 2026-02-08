@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { AppSettings } from "../../../../types";
 import { fileManagerName, openInFileManagerLabel } from "../../../../utils/platformPaths";
+import { getCliCapabilities, getCliDisplayName } from "../../../../utils/cliCapabilities";
 
 type SettingsFeaturesSectionProps = {
   appSettings: AppSettings;
@@ -16,6 +17,7 @@ type ToggleControl = {
   subtitle: ReactNode;
   value: boolean;
   onToggle: () => void;
+  disabled?: boolean;
 };
 
 type SelectControl = {
@@ -26,6 +28,7 @@ type SelectControl = {
   ariaLabel: string;
   options: Array<{ value: string; label: string }>;
   onChange: (value: string) => void;
+  disabled?: boolean;
 };
 
 type InputControl = {
@@ -35,6 +38,7 @@ type InputControl = {
   value: string;
   placeholder: string;
   onChange: (value: string) => void;
+  disabled?: boolean;
 };
 
 const renderToggleControl = (control: ToggleControl) => (
@@ -48,6 +52,7 @@ const renderToggleControl = (control: ToggleControl) => (
       className={`settings-toggle ${control.value ? "on" : ""}`}
       onClick={control.onToggle}
       aria-pressed={control.value}
+      disabled={control.disabled}
     >
       <span className="settings-toggle-knob" />
     </button>
@@ -66,6 +71,7 @@ const renderSelectControl = (control: SelectControl) => (
       value={control.value}
       onChange={(event) => control.onChange(event.target.value)}
       aria-label={control.ariaLabel}
+      disabled={control.disabled}
     >
       {control.options.map((option) => (
         <option key={option.value} value={option.value}>
@@ -88,6 +94,7 @@ const renderInputControl = (control: InputControl) => (
       value={control.value}
       placeholder={control.placeholder}
       onChange={(event) => control.onChange(event.target.value)}
+      disabled={control.disabled}
     />
   </div>
 );
@@ -99,6 +106,10 @@ export function SettingsFeaturesSection({
   onOpenConfig,
   onUpdateAppSettings,
 }: SettingsFeaturesSectionProps) {
+  const cliCapabilities = getCliCapabilities(appSettings.cliType);
+  const isFullMode = cliCapabilities.tier === "full";
+  const activeCliName = getCliDisplayName(appSettings.cliType);
+
   const updateSettings = (patch: Partial<AppSettings>) => {
     void onUpdateAppSettings({
       ...appSettings,
@@ -121,6 +132,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           codexModel: value.trim() ? value : null,
         }),
+      disabled: !cliCapabilities.supportsCodexConfigSync,
     },
     {
       id: "features-model-provider-input",
@@ -136,6 +148,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           codexModelProvider: value.trim() ? value : null,
         }),
+      disabled: !cliCapabilities.supportsCodexConfigSync,
     },
     {
       id: "features-reasoning-effort-select",
@@ -157,6 +170,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           codexModelReasoningEffort: value as AppSettings["codexModelReasoningEffort"],
         }),
+      disabled: !cliCapabilities.supportsCodexConfigSync,
     },
     {
       id: "features-approval-policy-select",
@@ -178,6 +192,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           codexApprovalPolicy: value as AppSettings["codexApprovalPolicy"],
         }),
+      disabled: !cliCapabilities.supportsCodexConfigSync,
     },
     {
       id: "features-sandbox-mode-select",
@@ -198,6 +213,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           codexSandboxMode: value as AppSettings["codexSandboxMode"],
         }),
+      disabled: !cliCapabilities.supportsCodexConfigSync,
     },
     {
       id: "features-web-search-select",
@@ -217,6 +233,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           codexWebSearch: value as AppSettings["codexWebSearch"],
         }),
+      disabled: !cliCapabilities.supportsCodexConfigSync,
     },
     {
       id: "features-auth-credentials-store-select",
@@ -237,6 +254,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           codexCliAuthCredentialsStore: value as AppSettings["codexCliAuthCredentialsStore"],
         }),
+      disabled: !cliCapabilities.supportsCodexConfigSync,
     },
     {
       id: "features-auth-method-input",
@@ -252,6 +270,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           codexPreferredAuthMethod: value.trim() ? value : null,
         }),
+      disabled: !cliCapabilities.supportsCodexConfigSync,
     },
     {
       id: "features-check-for-updates-toggle",
@@ -266,6 +285,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           codexCheckForUpdates: !appSettings.codexCheckForUpdates,
         }),
+      disabled: !cliCapabilities.supportsCodexConfigSync,
     },
     {
       id: "features-collaboration-modes-toggle",
@@ -276,6 +296,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           collaborationModesEnabled: !appSettings.collaborationModesEnabled,
         }),
+      disabled: !cliCapabilities.supportsCollaborationModes,
     },
     {
       id: "features-personality-select",
@@ -296,6 +317,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           personality: value as AppSettings["personality"],
         }),
+      disabled: !cliCapabilities.supportsCodexConfigSync,
     },
     {
       id: "features-steer-toggle",
@@ -306,6 +328,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           steerEnabled: !appSettings.steerEnabled,
         }),
+      disabled: !cliCapabilities.supportsCodexConfigSync,
     },
     {
       id: "features-unified-exec-toggle",
@@ -316,6 +339,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           unifiedExecEnabled: !appSettings.unifiedExecEnabled,
         }),
+      disabled: !cliCapabilities.supportsCodexConfigSync,
     },
   ];
 
@@ -333,6 +357,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           codexShellToolEnabled: !appSettings.codexShellToolEnabled,
         }),
+      disabled: !cliCapabilities.supportsCodexConfigSync,
     },
     {
       id: "features-shell-snapshot-toggle",
@@ -347,6 +372,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           codexShellSnapshotEnabled: !appSettings.codexShellSnapshotEnabled,
         }),
+      disabled: !cliCapabilities.supportsCodexConfigSync,
     },
     {
       id: "features-apply-patch-freeform-toggle",
@@ -361,6 +387,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           codexApplyPatchFreeformEnabled: !appSettings.codexApplyPatchFreeformEnabled,
         }),
+      disabled: !cliCapabilities.supportsCodexConfigSync,
     },
     {
       id: "features-exec-policy-toggle",
@@ -375,6 +402,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           codexExecPolicyEnabled: !appSettings.codexExecPolicyEnabled,
         }),
+      disabled: !cliCapabilities.supportsCodexConfigSync,
     },
     {
       id: "features-smart-approvals-toggle",
@@ -389,6 +417,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           codexSmartApprovalsEnabled: !appSettings.codexSmartApprovalsEnabled,
         }),
+      disabled: !cliCapabilities.supportsCodexConfigSync,
     },
     {
       id: "features-remote-compaction-toggle",
@@ -403,6 +432,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           codexRemoteCompactionEnabled: !appSettings.codexRemoteCompactionEnabled,
         }),
+      disabled: !cliCapabilities.supportsCodexConfigSync,
     },
     {
       id: "features-experimental-windows-sandbox-toggle",
@@ -417,6 +447,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           codexExperimentalWindowsSandboxEnabled: !appSettings.codexExperimentalWindowsSandboxEnabled,
         }),
+      disabled: !cliCapabilities.supportsCodexConfigSync,
     },
     {
       id: "features-elevated-windows-sandbox-toggle",
@@ -431,6 +462,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           codexElevatedWindowsSandboxEnabled: !appSettings.codexElevatedWindowsSandboxEnabled,
         }),
+      disabled: !cliCapabilities.supportsCodexConfigSync,
     },
     {
       id: "features-experimental-collab-toggle",
@@ -441,6 +473,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           experimentalCollabEnabled: !appSettings.experimentalCollabEnabled,
         }),
+      disabled: !cliCapabilities.supportsCodexConfigSync,
     },
     {
       id: "features-experimental-apps-toggle",
@@ -455,6 +488,7 @@ export function SettingsFeaturesSection({
         updateSettings({
           experimentalAppsEnabled: !appSettings.experimentalAppsEnabled,
         }),
+      disabled: !cliCapabilities.supportsApps,
     },
   ];
 
@@ -483,6 +517,12 @@ export function SettingsFeaturesSection({
         </button>
       </div>
       {openConfigError && <div className="settings-help">{openConfigError}</div>}
+      {!isFullMode && (
+        <div className="settings-help">
+          Compatible mode active for {activeCliName}. Codex config controls are disabled unless the
+          active CLI supports full bidirectional JSON-RPC/app-server capabilities.
+        </div>
+      )}
       <div className="settings-subsection-title">Stable Features</div>
       <div className="settings-subsection-subtitle">
         Production-ready features enabled by default.

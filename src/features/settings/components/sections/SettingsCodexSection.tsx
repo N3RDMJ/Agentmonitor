@@ -17,6 +17,7 @@ import {
   withWorkspaceCliArgsOverride,
   withWorkspaceCliHomeOverride,
 } from "../../utils/cliBackend";
+import { getCliCapabilities, getCliDisplayName } from "../../../../utils/cliCapabilities";
 
 type SettingsCodexSectionProps = {
   appSettings: AppSettings;
@@ -109,18 +110,7 @@ type SettingsCodexSectionProps = {
   ) => Promise<void>;
 };
 
-const cliLabel = (cliType: CliType) => {
-  switch (cliType) {
-    case "gemini":
-      return "Gemini CLI";
-    case "cursor":
-      return "Cursor CLI";
-    case "claude":
-      return "Claude Code";
-    default:
-      return "Agent CLI";
-  }
-};
+const cliLabel = (cliType: CliType) => getCliDisplayName(cliType);
 
 export function SettingsCodexSection({
   appSettings,
@@ -206,6 +196,8 @@ export function SettingsCodexSection({
   onUpdateWorkspaceCodexBin,
   onUpdateWorkspaceSettings,
 }: SettingsCodexSectionProps) {
+  const cliCapabilities = getCliCapabilities(appSettings.cliType);
+  const isFullMode = cliCapabilities.tier === "full";
   return (
     <section className="settings-section">
       <div className="settings-section-title">CLI Backend</div>
@@ -232,6 +224,11 @@ export function SettingsCodexSection({
           <option value="cursor">Cursor CLI</option>
           <option value="claude">Claude Code</option>
         </select>
+        <div className="settings-help">
+          {isFullMode
+            ? "Mode: Full. This CLI supports bidirectional JSON-RPC streaming and the full interactive feature set."
+            : `Mode: Compatible. ${cliLabel(appSettings.cliType)} does not expose full bidirectional JSON-RPC in this app, so advanced live features (approvals, interrupts, MCP/apps parity) are limited.`}
+        </div>
       </div>
       <div className="settings-field">
         <label className="settings-field-label" htmlFor="codex-path">

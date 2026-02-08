@@ -7,6 +7,12 @@ Agent Monitor is a Tauri app for orchestrating multiple agents across local work
 
 ## Features
 
+### CLI Compatibility Tiers
+
+- **Full mode (Agent CLI/Codex):** bidirectional JSON-RPC app-server integration with full interactive capabilities.
+- **Compatible mode (Gemini CLI, Cursor CLI, Claude Code):** basic orchestration support, but limited parity for advanced live controls that depend on full duplex JSON-RPC streams.
+- The Settings UI surfaces the active mode and disables controls that are not supported by the active CLI capabilities.
+
 ### Workspaces & Threads
 
 - Add and persist workspaces, group/sort them, and jump into recent agent activity from the home dashboard.

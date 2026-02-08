@@ -129,6 +129,17 @@ export type RemoteBackendProvider = "tcp" | "orbit";
 export type ThemePreference = "system" | "light" | "dark" | "dim";
 export type PersonalityPreference = "friendly" | "pragmatic";
 export type CliType = "codex" | "gemini" | "cursor" | "claude";
+export type CliCapabilityTier = "full" | "compatible";
+export type CliCapabilities = {
+  tier: CliCapabilityTier;
+  supportsBidirectionalRpc: boolean;
+  supportsInterrupt: boolean;
+  supportsApprovals: boolean;
+  supportsCollaborationModes: boolean;
+  supportsApps: boolean;
+  supportsMcpServers: boolean;
+  supportsCodexConfigSync: boolean;
+};
 export type LocalUsageCliFilter = "all" | CliType;
 export type CursorOperatingMode = "agent" | "plan" | "ask" | "debug";
 export type CursorOutputFormat = "text" | "json" | "stream-json";

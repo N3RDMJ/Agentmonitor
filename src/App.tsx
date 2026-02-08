@@ -122,6 +122,7 @@ import { useCodeCssVars } from "./features/app/hooks/useCodeCssVars";
 import { useAccountSwitching } from "./features/app/hooks/useAccountSwitching";
 import { useNewAgentDraft } from "./features/app/hooks/useNewAgentDraft";
 import { useSystemNotificationThreadLinks } from "./features/app/hooks/useSystemNotificationThreadLinks";
+import { getCliCapabilities } from "./utils/cliCapabilities";
 
 const AboutView = lazy(() =>
   import("./features/about/components/AboutView").then((module) => ({
@@ -433,6 +434,10 @@ function MainApp() {
     preferredModelId: appSettings.lastComposerModelId,
     preferredEffort: appSettings.lastComposerReasoningEffort,
   });
+  const activeCliCapabilities = useMemo(
+    () => getCliCapabilities(appSettings.cliType),
+    [appSettings.cliType],
+  );
 
   const {
     collaborationModes,
@@ -441,7 +446,9 @@ function MainApp() {
     setSelectedCollaborationModeId,
   } = useCollaborationModes({
     activeWorkspace,
-    enabled: appSettings.collaborationModesEnabled,
+    enabled:
+      appSettings.collaborationModesEnabled &&
+      activeCliCapabilities.supportsCollaborationModes,
     onDebug: addDebugEntry,
   });
 
@@ -449,7 +456,9 @@ function MainApp() {
     modelShortcut: appSettings.composerModelShortcut,
     accessShortcut: appSettings.composerAccessShortcut,
     reasoningShortcut: appSettings.composerReasoningShortcut,
-    collaborationShortcut: appSettings.collaborationModesEnabled
+    collaborationShortcut:
+      appSettings.collaborationModesEnabled &&
+      activeCliCapabilities.supportsCollaborationModes
       ? appSettings.composerCollaborationShortcut
       : null,
     models,
@@ -494,7 +503,7 @@ function MainApp() {
   const { skills } = useSkills({ activeWorkspace, onDebug: addDebugEntry });
   const { apps } = useApps({
     activeWorkspace,
-    enabled: appSettings.experimentalAppsEnabled,
+    enabled: appSettings.experimentalAppsEnabled && activeCliCapabilities.supportsApps,
     onDebug: addDebugEntry,
   });
   const {

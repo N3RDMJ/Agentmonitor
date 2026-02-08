@@ -35,6 +35,7 @@ All notable changes to this project are documented in this file.
 - Restored the shared Codex Rust core (`src-tauri/src/codex/*` and `src-tauri/src/shared/codex_core.rs`) to upstream parity and reintroduced `codex_aux_core` wiring needed by upstream Codex command flows.
 - Extracted Settings CLI backend mapping logic into `src/features/settings/utils/cliBackend.ts` so multi-model behavior is isolated from the Settings view component for parity-oriented refactors.
 - Expanded structured Codex `config.toml` settings coverage in app settings sync/UI (model write, provider/reasoning/search/auth/update policy keys plus additional `[features]` flags), while keeping raw TOML editing available for advanced unmanaged sections.
+- Added CLI capability tiers (`Full` vs `Compatible`) with shared capability mapping, surfaced mode messaging in Settings, and capability-based disabling/gating for unsupported collaboration/apps/Codex-config controls on non-Codex CLIs.
 
 ### Added
 - Added this root-level changelog to track ongoing work in canonical form.
