@@ -7,6 +7,7 @@ import type {
   AgentProfileListResponse,
   AgentDoctorResult,
   AppSettings,
+  DetectedClis,
   DictationModelStatus,
   DictationSessionState,
   LocalUsageCliFilter,
@@ -608,6 +609,10 @@ export async function getAppSettings(): Promise<AppSettings> {
 
 export async function updateAppSettings(settings: AppSettings): Promise<AppSettings> {
   return invoke<AppSettings>("update_app_settings", { settings });
+}
+
+export async function detectInstalledClis(): Promise<DetectedClis> {
+  return invoke<DetectedClis>("detect_installed_clis");
 }
 
 export async function orbitConnectTest(): Promise<OrbitConnectTestResult> {

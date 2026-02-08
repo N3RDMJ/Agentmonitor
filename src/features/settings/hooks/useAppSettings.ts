@@ -24,6 +24,7 @@ function buildDefaultSettings(): AppSettings {
   const isMac = isMacPlatform();
   return {
     cliType: "codex",
+    cliTypeManuallySet: false,
     codexBin: null,
     codexArgs: null,
     geminiBin: null,

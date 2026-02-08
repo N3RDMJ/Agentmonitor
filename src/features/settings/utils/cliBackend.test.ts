@@ -15,6 +15,7 @@ import {
 
 const baseSettings: AppSettings = {
   cliType: "codex",
+  cliTypeManuallySet: false,
   codexBin: "codex",
   codexArgs: "--codex",
   geminiBin: "gemini",

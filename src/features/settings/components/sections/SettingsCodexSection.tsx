@@ -255,6 +255,7 @@ export function SettingsCodexSection({
             void onUpdateAppSettings({
               ...appSettings,
               cliType: event.target.value as AppSettings["cliType"],
+              cliTypeManuallySet: true,
             });
           }}
         >

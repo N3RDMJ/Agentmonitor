@@ -335,6 +335,8 @@ pub(crate) struct OpenAppTarget {
 pub(crate) struct AppSettings {
     #[serde(default = "default_cli_type", rename = "cliType")]
     pub(crate) cli_type: String,
+    #[serde(default, rename = "cliTypeManuallySet")]
+    pub(crate) cli_type_manually_set: bool,
     #[serde(default, rename = "codexBin")]
     pub(crate) codex_bin: Option<String>,
     #[serde(default, rename = "codexArgs")]
@@ -1040,6 +1042,7 @@ impl Default for AppSettings {
     fn default() -> Self {
         Self {
             cli_type: default_cli_type(),
+            cli_type_manually_set: false,
             codex_bin: None,
             codex_args: None,
             gemini_bin: None,
@@ -1127,6 +1130,7 @@ mod tests {
     fn app_settings_defaults_from_empty_json() {
         let settings: AppSettings = serde_json::from_str("{}").expect("settings deserialize");
         assert_eq!(settings.cli_type, "codex");
+        assert!(!settings.cli_type_manually_set);
         assert!(settings.codex_bin.is_none());
         assert!(settings.codex_args.is_none());
         assert!(settings.gemini_bin.is_none());

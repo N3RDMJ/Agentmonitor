@@ -74,6 +74,7 @@ pub fn run() {
             settings::get_app_settings,
             settings::update_app_settings,
             settings::get_codex_config_path,
+            settings::detect_installed_clis,
             files::file_read,
             files::file_write,
             files::agent_profiles_list,

@@ -11,6 +11,7 @@ import type { AppSettings, WorkspaceInfo } from "../../../types";
 // Default app settings
 export const defaultAppSettings: AppSettings = {
   cliType: "gemini",
+  cliTypeManuallySet: false,
   codexBin: null,
   codexArgs: null,
   geminiBin: null,

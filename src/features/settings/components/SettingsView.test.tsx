@@ -19,6 +19,7 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
 
 const baseSettings: AppSettings = {
   cliType: "codex",
+  cliTypeManuallySet: false,
   codexBin: null,
   codexArgs: null,
   geminiBin: null,

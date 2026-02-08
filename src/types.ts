@@ -180,8 +180,16 @@ export type OpenAppTarget = {
   args: string[];
 };
 
+export type DetectedClis = {
+  codex: string | null;
+  claude: string | null;
+  gemini: string | null;
+  cursor: string | null;
+};
+
 export type AppSettings = {
   cliType: CliType;
+  cliTypeManuallySet: boolean;
   codexBin: string | null;
   codexArgs: string | null;
   geminiBin: string | null;
