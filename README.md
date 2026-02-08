@@ -5,6 +5,13 @@
 
 AgentMonitor is a desktop Tauri app for running coding agents across local workspaces with one UI for threads, approvals, reviews, git workflows, prompts, and terminal tooling.
 
+## Quickstart (npm)
+
+```bash
+npm install
+npm run tauri dev
+```
+
 ## What It Supports
 
 ### CLI Backends
