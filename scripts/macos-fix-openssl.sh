@@ -6,9 +6,8 @@ identity="${CODESIGN_IDENTITY:-}"
 entitlements_path="${ENTITLEMENTS_PATH:-src-tauri/Entitlements.plist}"
 
 if [[ -z "${identity}" ]]; then
-  echo "CODESIGN_IDENTITY is required. Example:"
-  echo "  CODESIGN_IDENTITY='Developer ID Application: Your Name (TEAMID)' $0"
-  exit 1
+  echo "No CODESIGN_IDENTITY set; falling back to ad-hoc signing."
+  identity="-"
 fi
 
 if [[ ! -d "${app_path}" ]]; then
@@ -88,12 +87,17 @@ if ! otool -l "${bin_path}" | { command -v rg >/dev/null 2>&1 && rg -q "@executa
   install_name_tool -add_rpath "@executable_path/../Frameworks" "${bin_path}"
 fi
 
-codesign --force --options runtime --timestamp --sign "${identity}" "${frameworks_dir}/libcrypto.3.dylib"
-codesign --force --options runtime --timestamp --sign "${identity}" "${frameworks_dir}/libssl.3.dylib"
-codesign --force --options runtime --timestamp --sign "${identity}" "${codesign_entitlements[@]}" "${bin_path}"
-if [[ -f "${daemon_path}" ]]; then
-  codesign --force --options runtime --timestamp --sign "${identity}" "${codesign_entitlements[@]}" "${daemon_path}"
+codesign_flags=(--force --sign "${identity}")
+if [[ "${identity}" != "-" ]]; then
+  codesign_flags+=(--options runtime --timestamp)
 fi
-codesign --force --options runtime --timestamp --sign "${identity}" "${codesign_entitlements[@]}" "${app_path}"
+
+codesign "${codesign_flags[@]}" "${frameworks_dir}/libcrypto.3.dylib"
+codesign "${codesign_flags[@]}" "${frameworks_dir}/libssl.3.dylib"
+codesign "${codesign_flags[@]}" "${codesign_entitlements[@]}" "${bin_path}"
+if [[ -f "${daemon_path}" ]]; then
+  codesign "${codesign_flags[@]}" "${codesign_entitlements[@]}" "${daemon_path}"
+fi
+codesign "${codesign_flags[@]}" "${codesign_entitlements[@]}" "${app_path}"
 
 echo "Bundled OpenSSL dylibs and re-signed ${app_path}"

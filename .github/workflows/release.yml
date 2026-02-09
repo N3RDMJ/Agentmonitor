@@ -124,15 +124,10 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY="$(cat "$HOME/.tauri/codexmonitor.key")"
           npm run tauri -- build --bundles app
 
-      - name: Skip signing for test release
-        if: ${{ steps.mac_signing.outputs.sign_macos != 'true' }}
-        run: echo "Apple signing secrets are missing; packaging unsigned macOS artifacts for test release."
-
       - name: Bundle OpenSSL and re-sign
-        if: ${{ steps.mac_signing.outputs.sign_macos == 'true' }}
         run: |
           set -euo pipefail
-          CODESIGN_IDENTITY="$CODESIGN_IDENTITY" \
+          CODESIGN_IDENTITY="${CODESIGN_IDENTITY:-}" \
             scripts/macos-fix-openssl.sh
 
       - name: Notarize and staple
